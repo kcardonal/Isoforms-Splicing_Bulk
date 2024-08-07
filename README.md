@@ -1,2 +1,2 @@
 # Isoforms-Splicing_Bulk
-Scripts for analyzing BulkRNASeq for study Isoform expression and alternative splicing on sex chromosome aneuploidies.
+Scripts for analyzing Isoform expression and alternative splicing on sex chromosome aneuploidies using BulkRNASeq data
