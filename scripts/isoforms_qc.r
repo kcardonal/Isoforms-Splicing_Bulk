@@ -10,6 +10,7 @@ library(readxl)
 library(ggplot2)
 library(patchwork)
 library(sva)
+library(pheatmap)
 
 #_______________LOADING DATA_____________________
 
@@ -51,11 +52,14 @@ all(colnames(txi_iso$counts) == rownames(sample_info))
 design_formula <- ~ Sequencing_Batch + Cell_Type + Karyotype + Karyotype:Cell_Type
 dds_iso <- DESeqDataSetFromTximport(txi_iso, colData = sample_info, design = design_formula)
 
-#Apply varaince stabilizing transformation to stabilize the variance across the mean for PCA and other plots
+#Apply variance stabilizing transformation to stabilize the variance across the mean for PCA and other plots
 vsd_iso <- vst(dds_iso, blind = FALSE)
 #Calculate PCA
 pcaData_iso <- plotPCA(vsd_iso, intgroup=c("Sequencing_Batch", "Karyotype", "Cell_Type"), returnData=TRUE)
 percentVar_iso <- round(100 * attr(pcaData_iso, "percentVar"))
+#Save PCA data and variance explained
+save(pcaData_iso, percentVar_iso, file = "./data/pca_isoforms.RData")
+
 #Plot PCA
 #PCA colored by sequencing batch
 pca_batch <- ggplot(pcaData_iso, aes(x = PC1, y = PC2, color = Sequencing_Batch)) +
@@ -88,15 +92,13 @@ print(pca_iso)
 #Save the PCA plot
 ggsave("./plots/PCA_isoforms.png", pca_iso, width = 12, height = 6)
 
-#_______________BATCH CORRECTION_____________________
-#applying ComBat-Seq using the mod argument is more advanced and can be effective for my complex experimental design.
-#The mod matrix allows me to include other variables (like karyotype and cell type) in the batch correction process, 
-#helping to adjust for batch effects while preserving the biological variability associated with these factors.
-# this is to ensure that batch correction is done without diminishing the biological signal associated with my primary variables.
+#_______________BATCH CORRECTION WITH COMBAT-SEQ_____________________
+
+#applying ComBat-Seq to correct for batch effects in the isoform level data.
+#Combat-Seq works with raw RNA-seq counts and correct for batch effects without transforming the data. 
+#This method is particularly useful to maintain the original count distribution.
+
 iso_corrected <- ComBat_seq(counts = counts(dds_iso), batch = sample_info$Sequencing_Batch)
-
-
-
 #Create a DESeqDataSet object with the corrected data
 dds_iso_corrected <- DESeqDataSetFromMatrix(countData = iso_corrected, colData = sample_info, design = design_formula)
 
@@ -106,6 +108,9 @@ vsd_iso_corrected <- vst(dds_iso_corrected, blind = FALSE)
 #Calculate PCA
 pcaData_iso_corrected <- plotPCA(vsd_iso_corrected, intgroup=c("Sequencing_Batch", "Karyotype", "Cell_Type"), returnData=TRUE)
 percentVar_iso_corrected <- round(100 * attr(pcaData_iso_corrected, "percentVar"))
+#Save PCA data and variance explained
+save(pcaData_iso_corrected, percentVar_iso_corrected, file = "./data/pca_iso_combat_seq.RData")
+
 #Plot PCA by batch
 pca_batch_corrected <- ggplot(pcaData_iso_corrected, aes(x = PC1, y = PC2, color = Sequencing_Batch)) +
   geom_point(size = 3) +
@@ -133,3 +138,60 @@ pca_iso_corrected <- pca_batch_corrected + pca_karyotype_corrected + pca_cell_ty
 print(pca_iso_corrected)
 #Save the PCA plot
 ggsave("./plots/PCA_isoforms_corrected.png", pca_iso_corrected, width = 12, height = 6)  
+
+#_______________BATCH CORRECTION COMBAT_____________________
+
+#Combat is used in already transformed RNA-seq data (in my case VST/rlog from DESeq2) 
+#and need to remove batch effects on this transformed data.
+
+#Extract vst counts to use in ComBat
+vst_counts <- assay(vsd_iso)
+#Create a model matrix to include additional covariates in the batch correction process.
+#In this case, we will include the karyotype and cell type as covariates.
+model_matrix <- model.matrix(~ Karyotype + Cell_Type + Karyotype:Cell_Type, data = sample_info)
+#Apply ComBat to the vst counts
+vst_corrected <- ComBat(dat = vst_counts, batch = sample_info$Sequencing_Batch, mod = model_matrix)
+#Calculate PCA
+pcaData_combat <- prcomp(t(vst_corrected), center=TRUE, scale.=TRUE)
+#Extract PCA results for plotting
+pcaData_combat <- as.data.frame(pcaData_combat$x)
+#Add sample information to the PCA results
+pcaData_combat$Sequencing_Batch <- sample_info$Sequencing_Batch
+pcaData_combat$Karyotype <- sample_info$Karyotype
+pcaData_combat$Cell_Type <- sample_info$Cell_Type
+#Calculate the percentage of variance explained by each PC
+percentVar_combat <- round(100 * pcaData_combat$sdev^2 / sum(pcaData_combat$sdev^2))
+#Save PCA data and variance explained
+save(pcaData_combat, percentVar_combat, file = "./data/pca_iso_combat.RData")
+#Plot PCA
+#PCA colored by sequencing batch
+pca_batch_combat <- ggplot(pcaData_combat, aes(x = PC1, y = PC2, color = Sequencing_Batch)) +
+  geom_point(size = 3) +
+  xlab(paste0("PC1: ", percentVar_combat[1], "% variance")) +
+  ylab(paste0("PC2: ", percentVar_combat[2], "% variance")) +
+  ggtitle("PCA by Batch (Combat)") +
+  theme_minimal()
+#PCA colored by Karyotype
+pca_karyotype_combat <- ggplot(pcaData_combat, aes(x = PC1, y = PC2, color = Karyotype)) +
+  geom_point(size = 3) +
+  xlab(paste0("PC1: ", percentVar_combat[1], "% variance")) +
+  ylab(paste0("PC2: ", percentVar_combat[2], "% variance")) +
+  ggtitle("PCA by Karyotype (Combat)") +
+  theme_minimal()
+#PCA colored by Cell Type
+pca_cell_type_combat <- ggplot(pcaData_combat, aes(x = PC1, y = PC2, color = Cell_Type)) +
+  geom_point(size = 3) +
+  xlab(paste0("PC1: ", percentVar_combat[1], "% variance")) +
+  ylab(paste0("PC2: ", percentVar_combat[2], "% variance")) +
+  ggtitle("PCA by Cell Type (Combat)") +
+  theme_minimal()
+#Combine PCA plots in a single plot
+pca_combat <- pca_batch_combat + pca_karyotype_combat + pca_cell_type_combat + plot_layout(ncol = 3)
+#Display the PCA plot
+print(pca_combat)
+#Save the PCA plot
+ggsave("./plots/PCA_corrected_combat.png", pca_combat, width = 12, height = 6)
+
+
+
+
