@@ -160,29 +160,29 @@ pcaData_combat$Sequencing_Batch <- sample_info$Sequencing_Batch
 pcaData_combat$Karyotype <- sample_info$Karyotype
 pcaData_combat$Cell_Type <- sample_info$Cell_Type
 #Calculate the percentage of variance explained by each PC
-percentVar_combat <- round(100 * pcaData_combat$sdev^2 / sum(pcaData_combat$sdev^2))
+percentVar_combat <- (pcaData_combat$sdev^2) / sum(pcaData_combat$sdev^2) * 100
 #Save PCA data and variance explained
 save(pcaData_combat, percentVar_combat, file = "./data/pca_iso_combat.RData")
 #Plot PCA
 #PCA colored by sequencing batch
 pca_batch_combat <- ggplot(pcaData_combat, aes(x = PC1, y = PC2, color = Sequencing_Batch)) +
   geom_point(size = 3) +
-  xlab(paste0("PC1: ", percentVar_combat[1], "% variance")) +
-  ylab(paste0("PC2: ", percentVar_combat[2], "% variance")) +
+  xlab(paste0("PC1: ", round(percentVar_combat[1], 2), "% variance")) +
+  ylab(paste0("PC2: ", round(percentVar_combat[2],2), "% variance")) +
   ggtitle("PCA by Batch (Combat)") +
   theme_minimal()
 #PCA colored by Karyotype
 pca_karyotype_combat <- ggplot(pcaData_combat, aes(x = PC1, y = PC2, color = Karyotype)) +
   geom_point(size = 3) +
-  xlab(paste0("PC1: ", percentVar_combat[1], "% variance")) +
-  ylab(paste0("PC2: ", percentVar_combat[2], "% variance")) +
+  xlab(paste0("PC1: ", round(percentVar_combat[1], 2), "% variance")) +
+  ylab(paste0("PC2: ", round(percentVar_combat[2], 2), "% variance")) +
   ggtitle("PCA by Karyotype (Combat)") +
   theme_minimal()
 #PCA colored by Cell Type
 pca_cell_type_combat <- ggplot(pcaData_combat, aes(x = PC1, y = PC2, color = Cell_Type)) +
   geom_point(size = 3) +
-  xlab(paste0("PC1: ", percentVar_combat[1], "% variance")) +
-  ylab(paste0("PC2: ", percentVar_combat[2], "% variance")) +
+  xlab(paste0("PC1: ", round(percentVar_combat[1], 2), "% variance")) +
+  ylab(paste0("PC2: ", round(percentVar_combat[2], 2), "% variance")) +
   ggtitle("PCA by Cell Type (Combat)") +
   theme_minimal()
 #Combine PCA plots in a single plot
