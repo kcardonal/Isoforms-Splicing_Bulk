@@ -193,5 +193,31 @@ print(pca_combat)
 ggsave("./plots/PCA_corrected_combat.png", pca_combat, width = 12, height = 6)
 
 
+#_______________ASSESS BATCH EFFECT REMOVAL_____________________
+#Create heatmaps showing the distance or correlation between samples before and after batch correction.
+#To visualize the similarity between replicates and see if batch correction has effectively reduced 
+#unwanted batch variation.
 
+#Sample distance heatmap before batch correction
+sample_dist_before <- dist(t(assay(vsd_iso)))
+sample_dist_before <- as.matrix(sample_dist_before)
+pheatmap(sample_dist_before, annotation_col = sample_info,
+ main = "Sample Distance Before Batch Correction", fontsize = 6, cellwidth = 10, cellheight = 10, border_color = NA)
+#Save the heatmap
+ggsave("./plots/sample_dist_no_correction.png", width = 10, height = 10)
 
+#Sample distance heatmap after batch correction with ComBat-Seq
+sample_dist_after <- dist(t(iso_corrected))
+sample_dist_after <- as.matrix(sample_dist_after)
+pheatmap(sample_dist_after, annotation_col = sample_info,
+ main = "Sample Distance After Batch Correction (ComBat-Seq)", fontsize = 6, cellwidth = 10, cellheight = 10, border_color = NA)
+#Save the heatmap
+ggsave("./plots/sample_dist_combat_seq.png", width = 10, height = 10)
+
+#Sample distance heatmap after batch correction with ComBat
+sample_dist_combat <- dist(t(vst_corrected))
+sample_dist_combat <- as.matrix(sample_dist_combat)
+pheatmap(sample_dist_combat, annotation_col = sample_info,
+ main = "Sample Distance After Batch Correction (ComBat)", fontsize = 6, cellwidth = 10, cellheight = 10, border_color = NA)
+#Save the heatmap
+ggsave("./plots/sample_dist_combat.png", width = 10, height = 10)
