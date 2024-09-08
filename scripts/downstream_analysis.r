@@ -21,6 +21,11 @@ library(UpSetR)
 # This model includes an interaction term, allowing to test how the effect of aneuploidy level across different cell types. 
 #This is useful to test the hypothesis that karyotype effects are different in iPSCs versus NSCs or Neurons.
 
+# Load the combat-seq corrected data
+load("../Large_Files_No_repo/combat_seq_counts_isoforms.RData")
+# Load the sample information
+load("../Large_Files_No_repo/isoforms_data.RData")
+
 dds_combat_seq <- DESeqDataSetFromMatrix(countData = iso_corrected,
                                       colData = sample_info,
                                       design = ~ Cell_Type + Condition + Cell_Type:Condition)
@@ -196,6 +201,15 @@ ggsave("./plots/DTE_summary.png", width = 8, height = 6, units = "in")
 
 #________________________PLOT UPSET PLOTS________________________
 
+#Load the DTE results from an excel file
+res_KS_iPSCs_annotated <- read.xlsx("../results/DTE_results.xlsx", sheet = "KS_iPSCs", detectDates = FALSE)
+res_HGA_iPSCs_annotated <- read.xlsx("../results/DTE_results.xlsx", sheet = "HGA_iPSCs", detectDates = FALSE)
+res_KS_NSCs_annotated <- read.xlsx("../results/DTE_results.xlsx", sheet = "KS_NSCs", detectDates = FALSE)
+res_HGA_NSCs_annotated <- read.xlsx("../results/DTE_results.xlsx", sheet = "HGA_NSCs", detectDates = FALSE)
+res_KS_Neurons_annotated <- read.xlsx("../results/DTE_results.xlsx", sheet = "KS_Neurons", detectDates = FALSE)
+res_HGA_Neurons_annotated <- read.xlsx("../results/DTE_results.xlsx", sheet = "HGA_Neurons", detectDates = FALSE)
+
+
 # Prepare data for UpSet plots.
 # Example function for fetching up/downregulated transcripts
 get_up_down <- function(res) {
@@ -219,6 +233,7 @@ res_KS_Neurons_up_down <- get_up_down(res_KS_Neurons_annotated)
 res_HGA_Neurons_up_down <- get_up_down(res_HGA_Neurons_annotated)
 
 # Combine the up/downregulated lists for each condition and cell type
+
 # iPSCs
 upset_ks_ipscs <- list(KS_iPSCs_Up = res_KS_iPSCs_up_down$up,
                        KS_iPSCs_Down = res_KS_iPSCs_up_down$down,
@@ -233,4 +248,69 @@ upset(upset_data_ipscs, sets = names(upset_ks_ipscs),
       order.by = "freq",
       text.scale = 1.5)
 dev.off()
-save.image(file = "../Large_Files_No_repo/my_workspace.RData")
+#save.image(file = "../Large_Files_No_repo/my_workspace.RData")
+
+# NSCs
+upset_ks_nscs <- list(KS_NSCs_Up = res_KS_NSCs_up_down$up,
+                      KS_NSCs_Down = res_KS_NSCs_up_down$down,
+                      HGA_NSCs_Up = res_HGA_NSCs_up_down$up,
+                      HGA_NSCs_Down = res_HGA_NSCs_up_down$down)
+# convert the list to a format suitable for UpSetR
+upset_data_nscs <- fromList(upset_ks_nscs)
+#Generate the UpSet plot
+pdf(file = "./plots/DTE_upset_nscs.pdf", width = 10, height = 10)
+upset(upset_data_nscs, sets = names(upset_ks_nscs),
+      keep.order = TRUE,
+      order.by = "freq",
+      text.scale = 1.5)
+dev.off()
+
+# Neurons
+upset_ks_neurons <- list(KS_Neurons_Up = res_KS_Neurons_up_down$up,
+                         KS_Neurons_Down = res_KS_Neurons_up_down$down,
+                         HGA_Neurons_Up = res_HGA_Neurons_up_down$up,
+                         HGA_Neurons_Down = res_HGA_Neurons_up_down$down)
+# convert the list to a format suitable for UpSetR
+upset_data_neurons <- fromList(upset_ks_neurons)
+#Generate the UpSet plot
+pdf(file = "./plots/DTE_upset_neurons.pdf", width = 10, height = 10)
+upset(upset_data_neurons, sets = names(upset_ks_neurons),
+      keep.order = TRUE,
+      order.by = "freq",
+      text.scale = 1.5)
+dev.off()
+
+#Upset plots by karyotype in all cell types
+# KS
+upset_ks_all <- list(KS_iPSCs_Up = res_KS_iPSCs_up_down$up,
+                     KS_iPSCs_Down = res_KS_iPSCs_up_down$down,
+                     KS_NSCs_Up = res_KS_NSCs_up_down$up,
+                     KS_NSCs_Down = res_KS_NSCs_up_down$down,
+                     KS_Neurons_Up = res_KS_Neurons_up_down$up,
+                     KS_Neurons_Down = res_KS_Neurons_up_down$down)
+# convert the list to a format suitable for UpSetR
+upset_data_ks_all <- fromList(upset_ks_all)
+#Generate the UpSet plot
+pdf(file = "./plots/DTE_upset_ks_all.pdf", width = 10, height = 10)
+upset(upset_data_ks_all, sets = names(upset_ks_all),
+      keep.order = TRUE,
+      order.by = "freq",
+      text.scale = 1.5)
+dev.off()
+
+# HGA
+upset_hga_all <- list(HGA_iPSCs_Up = res_HGA_iPSCs_up_down$up,
+                      HGA_iPSCs_Down = res_HGA_iPSCs_up_down$down,
+                      HGA_NSCs_Up = res_HGA_NSCs_up_down$up,
+                      HGA_NSCs_Down = res_HGA_NSCs_up_down$down,
+                      HGA_Neurons_Up = res_HGA_Neurons_up_down$up,
+                      HGA_Neurons_Down = res_HGA_Neurons_up_down$down)
+# convert the list to a format suitable for UpSetR
+upset_data_hga_all <- fromList(upset_hga_all)
+#Generate the UpSet plot
+pdf(file = "./plots/DTE_upset_hga_all.pdf", width = 10, height = 10)
+upset(upset_data_hga_all, sets = names(upset_hga_all),
+      keep.order = TRUE,
+      order.by = "freq",
+      text.scale = 1.5)
+dev.off()                      
