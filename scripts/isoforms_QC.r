@@ -54,9 +54,12 @@ save(txi_iso, sample_info, file = "./data/isoforms_data.RData")
 
 design_formula <- ~ Sequencing_Batch + Cell_Type + Karyotype + Karyotype:Cell_Type
 dds_iso <- DESeqDataSetFromTximport(txi_iso, colData = sample_info, design = design_formula)
-
+#Save the DESeqDataSet object from raw counts /data/raw_counts_isoforms.RData"
+save(dds_iso, file = "../Large_Files_No_repo/raw_counts_isoforms.RData")
 #Apply variance stabilizing transformation to stabilize the variance across the mean for PCA and other plots
 vsd_iso <- vst(dds_iso, blind = FALSE)
+#Save the variance stabilized transformed counts
+save(vsd_iso, file = "../Large_Files_No_repo/vst_counts_isoforms.RData")
 #Calculate PCA
 pcaData_iso <- plotPCA(vsd_iso, intgroup=c("Sequencing_Batch", "Karyotype", "Cell_Type"), returnData=TRUE)
 percentVar_iso <- round(100 * attr(pcaData_iso, "percentVar"))
@@ -102,8 +105,12 @@ ggsave("./plots/PCA_isoforms.png", pca_iso, width = 12, height = 6)
 #This method is particularly useful to maintain the original count distribution.
 
 iso_corrected <- ComBat_seq(counts = counts(dds_iso), batch = sample_info$Sequencing_Batch)
+#Save the corrected counts
+save(iso_corrected, file = "../Large_Files_No_repo/combat_seq_counts_isoforms.RData")
 #Create a DESeqDataSet object with the corrected data
 dds_iso_corrected <- DESeqDataSetFromMatrix(countData = iso_corrected, colData = sample_info, design = design_formula)
+#Save the DESeqDataSet object with the corrected data (combat-seq)
+save(dds_iso_corrected, file = "../Large_Files_No_repo/dds_iso_corrected_combat_seq.RData")
 
 #_______________PCA ANALYSIS AFTER BATCH CORRECTION_____________________
 #vst transformation for PCA plotting 
@@ -154,16 +161,18 @@ vst_counts <- assay(vsd_iso)
 model_matrix <- model.matrix(~ Karyotype + Cell_Type + Karyotype:Cell_Type, data = sample_info)
 #Apply ComBat to the vst counts
 vst_corrected <- ComBat(dat = vst_counts, batch = sample_info$Sequencing_Batch, mod = model_matrix)
+#Save the corrected counts
+save(vst_corrected, file = "../Large_Files_No_repo/combat_counts_isoforms.RData")
 #Calculate PCA
-pcaData_combat <- prcomp(t(vst_corrected), center=TRUE, scale.=TRUE)
+pcaData_combat_calc <- prcomp(t(vst_corrected), center=TRUE, scale.=TRUE)
+#Calculate the percentage of variance explained by each PC
+percentVar_combat <- (pcaData_combat_calc$sdev^2) / sum(pcaData_combat_calc$sdev^2) * 100
 #Extract PCA results for plotting
-pcaData_combat <- as.data.frame(pcaData_combat$x)
+pcaData_combat <- as.data.frame(pcaData_combat_calc$x)
 #Add sample information to the PCA results
 pcaData_combat$Sequencing_Batch <- sample_info$Sequencing_Batch
 pcaData_combat$Karyotype <- sample_info$Karyotype
 pcaData_combat$Cell_Type <- sample_info$Cell_Type
-#Calculate the percentage of variance explained by each PC
-percentVar_combat <- (pcaData_combat$sdev^2) / sum(pcaData_combat$sdev^2) * 100
 #Save PCA data and variance explained
 save(pcaData_combat, percentVar_combat, file = "./data/pca_iso_combat.RData")
 #Plot PCA
@@ -193,7 +202,7 @@ pca_combat <- pca_batch_combat + pca_karyotype_combat + pca_cell_type_combat + p
 #Display the PCA plot
 print(pca_combat)
 #Save the PCA plot
-ggsave("./plots/PCA_corrected_combat.png", pca_combat, width = 12, height = 6)
+ggsave("./plots/PCA_isoforms_combat.png", pca_combat, width = 12, height = 6)
 
 
 #_______________ASSESS BATCH EFFECT REMOVAL_____________________
@@ -280,58 +289,3 @@ hm_combat <- pheatmap(sample_dist_combat,
   border_color = NA
   #filename = "./plots/sample_dist_combat.png"
 )
-
-#_________________BATCHEFFECT ASSESMENT METRICS_____________________
-
-#Silhouette width analysis: a measure of how similar an object is to its own cluster compared to other clusters.
-#This metric ranges from -1 to 1, where a value close to 1 indicates that the object is well matched to its own cluster.
-#A value close to -1 indicates that the object is poorly matched to its own cluster.
-
-# Assuming 'dist_raw' is your pheatmap object
-# Extract the order of samples
-sample_order <- hm_raw$tree_row$order
-# Extract cluster assignments; this uses cutree to determine cluster groups
-# Adjust 'k' based on expected number of biological clusters or what you used
-clusters <- cutree(dist_raw$tree_row, k = 3)  # For example, 3 clusters
-# Map the cluster assignments back to the sample names
-cluster_assignments <- data.frame(
-  Sample = names(clusters),
-  Cluster = as.factor(clusters)
-)
-# Check the head of cluster_assignments to confirm
-head(cluster_assignments)
-ordered_clusters <- cluster_assignments[order(cluster_assignments$Sample), "Cluster"]
-# Calculate silhouette widths
-sil_widths <- silhouette(ordered_clusters, sample_dist_before)
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-#Silhouette width before batch correction
-sil_width_before <- silhouette(dist(sample_dist_before), as.factor(annotation_df$Sequencing_Batch))
-mean_sil_width_before <- mean(sil_width_before[, "sil_width"])
-cat("Mean Silhouette Width Before Batch Correction: ", mean_sil_width_before, "\n")
-
-#Silhouette width after batch correction with ComBat-Seq
-sil_width_combatseq <- silhouette(as.dist(sample_dist_combatseq), as.factor(annotation_df$Sequencing_Batch))
-mean_sil_width_combatseq <- mean(sil_width_combatseq[, "sil_width"])
-cat("Mean Silhouette Width After Batch Correction (ComBat-Seq): ", mean_sil_width_combatseq, "\n")
-
-#Silhouette width after batch correction with ComBat
-sil_width_combat <- silhouette(as.dist(sample_dist_combat), as.factor(annotation_df$Sequencing_Batch))
-mean_sil_width_combat <- mean(sil_width_combat[, "sil_width"])
-cat("Mean Silhouette Width After Batch Correction (ComBat): ", mean_sil_width_combat, "\n")
