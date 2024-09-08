@@ -209,6 +209,19 @@ res_HGA_NSCs_annotated <- read.xlsx("../results/DTE_results.xlsx", sheet = "HGA_
 res_KS_Neurons_annotated <- read.xlsx("../results/DTE_results.xlsx", sheet = "KS_Neurons", detectDates = FALSE)
 res_HGA_Neurons_annotated <- read.xlsx("../results/DTE_results.xlsx", sheet = "HGA_Neurons", detectDates = FALSE)
 
+# Fix rownames
+rownames(res_KS_iPSCs_annotated) <- res_KS_iPSCs_annotated$transcript_id
+res_KS_iPSCs_annotated <- res_KS_iPSCs_annotated[, -1]
+rownames(res_HGA_iPSCs_annotated) <- res_HGA_iPSCs_annotated$transcript_id
+res_HGA_iPSCs_annotated <- res_HGA_iPSCs_annotated[, -1]
+rownames(res_KS_NSCs_annotated) <- res_KS_NSCs_annotated$transcript_id
+res_KS_NSCs_annotated <- res_KS_NSCs_annotated[, -1]
+rownames(res_HGA_NSCs_annotated) <- res_HGA_NSCs_annotated$transcript_id
+res_HGA_NSCs_annotated <- res_HGA_NSCs_annotated[, -1]
+rownames(res_KS_Neurons_annotated) <- res_KS_Neurons_annotated$transcript_id
+res_KS_Neurons_annotated <- res_KS_Neurons_annotated[, -1]
+rownames(res_HGA_Neurons_annotated) <- res_HGA_Neurons_annotated$transcript_id
+res_HGA_Neurons_annotated <- res_HGA_Neurons_annotated[, -1]
 
 # Prepare data for UpSet plots.
 # Example function for fetching up/downregulated transcripts
@@ -248,7 +261,7 @@ upset(upset_data_ipscs, sets = names(upset_ks_ipscs),
       order.by = "freq",
       text.scale = 1.5)
 dev.off()
-#save.image(file = "../Large_Files_No_repo/my_workspace.RData")
+
 
 # NSCs
 upset_ks_nscs <- list(KS_NSCs_Up = res_KS_NSCs_up_down$up,
@@ -313,4 +326,37 @@ upset(upset_data_hga_all, sets = names(upset_hga_all),
       keep.order = TRUE,
       order.by = "freq",
       text.scale = 1.5)
-dev.off()                      
+dev.off()
+
+#________________________GET THE TRANSCRIPS IDENTITY FROM THE UPSET PLOTS________________________
+# Get the transcripts identity from the UpSet plots
+
+# iPSCs
+#find common upregulated transcripts in KS and HGA in iPSCs
+common_up_ipscs <- intersect(res_KS_iPSCs_up_down$up, res_HGA_iPSCs_up_down$up)
+# Create a function to map the common transcripts on the original results, and extract in a new data frame
+map_common_transcripts <- function(common, res){
+  common_res <- res[which(rownames(res) %in% common), ]
+  return(common_res)
+}
+# Map the common upregulated transcripts to the original results
+common_up_ipscs_ks <- map_common_transcripts(common_up_ipscs, res_KS_iPSCs_annotated)
+common_up_ipscs_hga <- map_common_transcripts(common_up_ipscs, res_HGA_iPSCs_annotated)
+
+#Merge by rowname the results in a single data frame
+common_up_ipscs_merged <- merge(common_up_ipscs_ks, common_up_ipscs_hga, by = "row.names", all = TRUE)
+#rename the row.names column to transcript_id
+colnames(common_up_ipscs_merged)[1] <- "transcript_id"
+#remove the redundant columns
+common_up_ipscs_merged <- common_up_ipscs_merged[, -c(23:31)]
+#save the results
+write.xlsx(common_up_ipscs_merged, file = "../results/common_upregulated_iPSCs.xlsx")
+
+
+
+
+
+#find common downregulated transcripts in KS and HGA in iPSCs
+common_down_ipscs <- intersect(res_KS_iPSCs_up_down$down, res_HGA_iPSCs_up_down$down)
+
+#save.image(file = "../Large_Files_No_repo/my_workspace.RData")
