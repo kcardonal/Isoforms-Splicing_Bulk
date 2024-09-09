@@ -231,8 +231,7 @@ get_up_down <- function(res) {
   return(list(up = upregulated, down = downregulated))
 }
 
-# Prepare the up/downregulated lists for each condition and cell type
-
+# process_common_transcripts(res_KS_iPSCs_up_down, res_HGA_iPSCs_up_down, res_KS_iPSCs_annotated, res_HGA_iPSCs_annotated, "../results/common_upregulated_iPSCs.xlsx")
 # iPSCs
 res_KS_iPSCs_up_down <- get_up_down(res_KS_iPSCs_annotated)
 res_HGA_iPSCs_up_down <- get_up_down(res_HGA_iPSCs_annotated)
@@ -331,32 +330,200 @@ dev.off()
 #________________________GET THE TRANSCRIPS IDENTITY FROM THE UPSET PLOTS________________________
 # Get the transcripts identity from the UpSet plots
 
-# iPSCs
-#find common upregulated transcripts in KS and HGA in iPSCs
-common_up_ipscs <- intersect(res_KS_iPSCs_up_down$up, res_HGA_iPSCs_up_down$up)
-# Create a function to map the common transcripts on the original results, and extract in a new data frame
-map_common_transcripts <- function(common, res){
-  common_res <- res[which(rownames(res) %in% common), ]
-  return(common_res)
+process_common_transcripts <- function(res_1, res_2, res_df1, res_df2, dir1, dir2, name1, name2, output_file) {
+  # function to process common transcripts between two conditions
+
+  # res_1: list of up/downregulated transcripts for condition 1
+  # res_2: list of up/downregulated transcripts for condition 2
+  # res_df1: data frame with the results for condition 1
+  # res_df2: data frame with the results for condition 2
+  # dir1: direction of the transcripts to be compared in res_1 (up or down)
+  # dir2: direction of the transcripts to be compared in res_2 (up or down)
+  # name1: name to discriminate results that cames from the results in condition 1 (e.g., "_KS")
+  # name2: name to discriminate results that cames from the results in condition 2 (e.g., "_HGA")
+  # output_file: path to save the output file as excel
+
+
+  # Calculate the intersection of upregulated transcripts
+  common <- intersect(res_1[[dir1]], res_2[[dir2]])
+  
+  # Create a function to map the common transcripts on the original results, and extract in a new data frame
+  map_common_transcripts <- function(common, res) {
+    # Check if res is a data frame
+    if (!is.data.frame(res)) {
+      stop("The input 'res' is not a data frame.")
+    }
+    
+    # Check if common contains valid row names
+    valid_rows <- rownames(res) %in% common
+    if (sum(valid_rows) == 0) {
+      stop("No common transcripts found in the row names of 'res'.")
+    }
+    
+    common_res <- res[valid_rows, ]
+    return(common_res)
+  }
+  
+  # Map the common upregulated transcripts to the original results
+  common_1 <- map_common_transcripts(common, res_df1)
+  common_2 <- map_common_transcripts(common, res_df2)
+  
+  # Merge by rowname the results in a single data frame
+  common_merged <- merge(common_1, common_2, by = "row.names", all = TRUE)
+  
+  # Rename the row.names column to transcript_id
+  colnames(common_merged)[1] <- "transcript_id"
+  # Rename .x and .y columns to indicate the source
+  colnames(common_merged) <- gsub("\\.x", name1, colnames(common_merged))
+  colnames(common_merged) <- gsub("\\.y", name2, colnames(common_merged))
+  # Remove the redundant columns
+  common_merged <- common_merged[, -c(23:31)]
+  # Save the results
+  write.xlsx(common_merged, file = output_file)
 }
-# Map the common upregulated transcripts to the original results
-common_up_ipscs_ks <- map_common_transcripts(common_up_ipscs, res_KS_iPSCs_annotated)
-common_up_ipscs_hga <- map_common_transcripts(common_up_ipscs, res_HGA_iPSCs_annotated)
 
-#Merge by rowname the results in a single data frame
-common_up_ipscs_merged <- merge(common_up_ipscs_ks, common_up_ipscs_hga, by = "row.names", all = TRUE)
-#rename the row.names column to transcript_id
-colnames(common_up_ipscs_merged)[1] <- "transcript_id"
-#remove the redundant columns
-common_up_ipscs_merged <- common_up_ipscs_merged[, -c(23:31)]
-#save the results
-write.xlsx(common_up_ipscs_merged, file = "../results/common_upregulated_iPSCs.xlsx")
+# Process common transcripts in iPSCs:
+# KS vs HGA in Upregulated transcripts
+process_common_transcripts(res_KS_iPSCs_up_down, res_HGA_iPSCs_up_down, res_KS_iPSCs_annotated, res_HGA_iPSCs_annotated, "up", "up", "_KS", "_HGA", "../results/upset_upregulated_iPSCs.xlsx")
+# KS vs HGA in Downregulated transcripts
+process_common_transcripts(res_KS_iPSCs_up_down, res_HGA_iPSCs_up_down, res_KS_iPSCs_annotated, res_HGA_iPSCs_annotated, "down", "down", "_KS", "_HGA", "../results/upset_downregulated_iPSCs.xlsx")
+# KS vs HGA upregulated to downregulated transcripts
+process_common_transcripts(res_KS_iPSCs_up_down, res_HGA_iPSCs_up_down, res_KS_iPSCs_annotated, res_HGA_iPSCs_annotated, "up", "down", "_KS", "_HGA", "../results/upset_up_to_down_iPSCs.xlsx")
+# KS vs HGA downregulated to upregulated transcripts
+process_common_transcripts(res_KS_iPSCs_up_down, res_HGA_iPSCs_up_down, res_KS_iPSCs_annotated, res_HGA_iPSCs_annotated, "down", "up", "_KS", "_HGA", "../results/upset_down_to_up_iPSCs.xlsx")
 
+# Process common transcripts in NSCs:
+# KS vs HGA in Upregulated transcripts
+process_common_transcripts(res_KS_NSCs_up_down, res_HGA_NSCs_up_down, res_KS_NSCs_annotated, res_HGA_NSCs_annotated, "up", "up", "_KS", "_HGA", "../results/upset_upregulated_NSCs.xlsx")
+# KS vs HGA in Downregulated transcripts
+process_common_transcripts(res_KS_NSCs_up_down, res_HGA_NSCs_up_down, res_KS_NSCs_annotated, res_HGA_NSCs_annotated, "down", "down", "_KS", "_HGA", "../results/upset_downregulated_NSCs.xlsx")
+# KS vs HGA upregulated to downregulated transcripts
+process_common_transcripts(res_KS_NSCs_up_down, res_HGA_NSCs_up_down, res_KS_NSCs_annotated, res_HGA_NSCs_annotated, "up", "down", "_KS", "_HGA", "../results/upset_up_to_down_NSCs.xlsx")
+# KS vs HGA downregulated to upregulated transcripts
+process_common_transcripts(res_KS_NSCs_up_down, res_HGA_NSCs_up_down, res_KS_NSCs_annotated, res_HGA_NSCs_annotated, "down", "up", "_KS", "_HGA", "../results/upset_down_to_up_NSCs.xlsx")
 
+# Process common transcripts in Neurons:
+# KS vs HGA in Upregulated transcripts
+process_common_transcripts(res_KS_Neurons_up_down, res_HGA_Neurons_up_down, res_KS_Neurons_annotated, res_HGA_Neurons_annotated, "up", "up", "_KS", "_HGA", "../results/upset_upregulated_Neurons.xlsx")
+# KS vs HGA in Downregulated transcripts
+process_common_transcripts(res_KS_Neurons_up_down, res_HGA_Neurons_up_down, res_KS_Neurons_annotated, res_HGA_Neurons_annotated, "down", "down", "_KS", "_HGA", "../results/upset_downregulated_Neurons.xlsx")
+# KS vs HGA upregulated to downregulated transcripts
+process_common_transcripts(res_KS_Neurons_up_down, res_HGA_Neurons_up_down, res_KS_Neurons_annotated, res_HGA_Neurons_annotated, "up", "down", "_KS", "_HGA", "../results/upset_up_to_down_Neurons.xlsx")
+# KS vs HGA downregulated to upregulated transcripts
+process_common_transcripts(res_KS_Neurons_up_down, res_HGA_Neurons_up_down, res_KS_Neurons_annotated, res_HGA_Neurons_annotated, "down", "up", "_KS", "_HGA", "../results/upset_down_to_up_Neurons.xlsx")
 
+# Independent processing to get the common transcripts between all cell types by karyotype
+# KS upregulated transcripts
+common_ks_up <- Reduce(intersect, list(res_KS_iPSCs_up_down$up, res_KS_NSCs_up_down$up, res_KS_Neurons_up_down$up))
+# KS downregulated transcripts
+common_ks_down <- Reduce(intersect, list(res_KS_iPSCs_up_down$down, res_KS_NSCs_up_down$down, res_KS_Neurons_up_down$down))
+# HGA upregulated transcripts
+common_hga_up <- Reduce(intersect, list(res_HGA_iPSCs_up_down$up, res_HGA_NSCs_up_down$up, res_HGA_Neurons_up_down$up))
+# HGA downregulated transcripts
+common_hga_down <- Reduce(intersect, list(res_HGA_iPSCs_up_down$down, res_HGA_NSCs_up_down$down, res_HGA_Neurons_up_down$down))
 
+# Map the common transcripts to the original results
 
-#find common downregulated transcripts in KS and HGA in iPSCs
-common_down_ipscs <- intersect(res_KS_iPSCs_up_down$down, res_HGA_iPSCs_up_down$down)
+#upregulated KS
+common_ks_up_i  <- map_common_transcripts(common_ks_up, res_KS_iPSCs_annotated)
+common_ks_up_ns  <- map_common_transcripts(common_ks_up, res_KS_NSCs_annotated)
+common_ks_up_n <- map_common_transcripts(common_ks_up, res_KS_Neurons_annotated)
+# Merge the three sets in a single data frame
+common_ks_up_merged <- merge(common_ks_up_i, common_ks_up_ns, by = "row.names", all = TRUE)
+# Rename the row.names column to transcript_id
+colnames(common_ks_up_merged)[1] <- "transcript_id"
+# Make transcript_id the rownames
+rownames(common_ks_up_merged) <- common_ks_up_merged$transcript_id
+# do the last merge
+common_ks_up_merged <- merge(common_ks_up_merged, common_ks_up_n, by = "row.names", all = TRUE)
+# Remove the Row.names column
+common_ks_up_merged <- common_ks_up_merged[, -1]
+# make transcript_id the rownames
+rownames(common_ks_up_merged) <- common_ks_up_merged$transcript_id
+# Remove the transcript_id column
+common_ks_up_merged <- common_ks_up_merged[, -1]
+# Remove redundant columns
+common_ks_up_merged <- common_ks_up_merged[, -c(7:15, 22:30)]
+# Rename the columns to indicate the source
+colnames(common_ks_up_merged) <- gsub("\\.x", "_iPSCs", colnames(common_ks_up_merged))
+colnames(common_ks_up_merged) <- gsub("\\.y", "_NSCs", colnames(common_ks_up_merged))
+# Save the results
+write.xlsx(common_ks_up_merged, file = "../results/common_upregulated_KS_all.xlsx")
 
-#save.image(file = "../Large_Files_No_repo/my_workspace.RData")
+#downregulated KS
+common_ks_down_i <- map_common_transcripts(common_ks_down, res_KS_iPSCs_annotated)
+common_ks_down_ns <- map_common_transcripts(common_ks_down, res_KS_NSCs_annotated)
+common_ks_down_n <- map_common_transcripts(common_ks_down, res_KS_Neurons_annotated)
+# Merge the three sets in a single data frame
+common_ks_down_merged <- merge(common_ks_down_i, common_ks_down_ns, by = "row.names", all = TRUE)
+# Rename the row.names column to transcript_id
+colnames(common_ks_down_merged)[1] <- "transcript_id"
+# Make transcript_id the rownames
+rownames(common_ks_down_merged) <- common_ks_down_merged$transcript_id
+# do the last merge
+common_ks_down_merged <- merge(common_ks_down_merged, common_ks_down_n, by = "row.names", all = TRUE)
+# Remove the Row.names column
+common_ks_down_merged <- common_ks_down_merged[, -1]
+# make transcript_id the rownames
+rownames(common_ks_down_merged) <- common_ks_down_merged$transcript_id
+# Remove the transcript_id column
+common_ks_down_merged <- common_ks_down_merged[, -1]
+# Remove redundant columns
+common_ks_down_merged <- common_ks_down_merged[, -c(7:15, 22:30)]
+# Rename the columns to indicate the source
+colnames(common_ks_down_merged) <- gsub("\\.x", "_iPSCs", colnames(common_ks_down_merged))
+colnames(common_ks_down_merged) <- gsub("\\.y", "_NSCs", colnames(common_ks_down_merged))
+# Save the results
+write.xlsx(common_ks_down_merged, file = "../results/common_downregulated_KS_all.xlsx")
+
+#upregulated HGA
+common_hga_up_i <- map_common_transcripts(common_hga_up, res_HGA_iPSCs_annotated)
+common_hga_up_ns <- map_common_transcripts(common_hga_up, res_HGA_NSCs_annotated)
+common_hga_up_n <- map_common_transcripts(common_hga_up, res_HGA_Neurons_annotated)
+# Merge the three sets in a single data frame
+common_hga_up_merged <- merge(common_hga_up_i, common_hga_up_ns, by = "row.names", all = TRUE)
+# Rename the row.names column to transcript_id
+colnames(common_hga_up_merged)[1] <- "transcript_id"
+# Make transcript_id the rownames
+rownames(common_hga_up_merged) <- common_hga_up_merged$transcript_id
+# do the last merge
+common_hga_up_merged <- merge(common_hga_up_merged, common_hga_up_n, by = "row.names", all = TRUE)
+# Remove the Row.names column
+common_hga_up_merged <- common_hga_up_merged[, -1]
+# make transcript_id the rownames
+rownames(common_hga_up_merged) <- common_hga_up_merged$transcript_id
+# Remove the transcript_id column
+common_hga_up_merged <- common_hga_up_merged[, -1]
+# Remove redundant columns
+common_hga_up_merged <- common_hga_up_merged[, -c(7:15, 22:30)]
+# Rename the columns to indicate the source
+colnames(common_hga_up_merged) <- gsub("\\.x", "_iPSCs", colnames(common_hga_up_merged))
+colnames(common_hga_up_merged) <- gsub("\\.y", "_NSCs", colnames(common_hga_up_merged))
+# Save the results
+write.xlsx(common_hga_up_merged, file = "../results/common_upregulated_HGA_all.xlsx")
+
+#downregulated HGA
+common_hga_down_i <- map_common_transcripts(common_hga_down, res_HGA_iPSCs_annotated)
+common_hga_down_ns <- map_common_transcripts(common_hga_down, res_HGA_NSCs_annotated)
+common_hga_down_n <- map_common_transcripts(common_hga_down, res_HGA_Neurons_annotated)
+# Merge the three sets in a single data frame
+common_hga_down_merged <- merge(common_hga_down_i, common_hga_down_ns, by = "row.names", all = TRUE)
+# Rename the row.names column to transcript_id
+colnames(common_hga_down_merged)[1] <- "transcript_id"
+# Make transcript_id the rownames
+rownames(common_hga_down_merged) <- common_hga_down_merged$transcript_id
+# do the last merge
+common_hga_down_merged <- merge(common_hga_down_merged, common_hga_down_n, by = "row.names", all = TRUE)
+# Remove the Row.names column
+common_hga_down_merged <- common_hga_down_merged[, -1]
+# make transcript_id the rownames
+rownames(common_hga_down_merged) <- common_hga_down_merged$transcript_id
+# Remove the transcript_id column
+common_hga_down_merged <- common_hga_down_merged[, -1]
+# Remove redundant columns
+common_hga_down_merged <- common_hga_down_merged[, -c(7:15, 22:30)]
+# Rename the columns to indicate the source
+colnames(common_hga_down_merged) <- gsub("\\.x", "_iPSCs", colnames(common_hga_down_merged))
+colnames(common_hga_down_merged) <- gsub("\\.y", "_NSCs", colnames(common_hga_down_merged))
+# Save the results
+write.xlsx(common_hga_down_merged, file = "../results/common_downregulated_HGA_all.xlsx")
