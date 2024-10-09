@@ -42,6 +42,8 @@ all(colnames(txi_iso$counts) == rownames(sample_info))
 #TRUE
 #Save the object with the counts and the sample information
 save(txi_iso, sample_info, file = "./data/isoforms_data.RData")
+#save the isoform counts
+save(txi_iso, file = "../Large_Files_No_repo/isoform_counts_raw.RData")
 
 #_______________PCA ANALYSIS BEFORE BATCH CORRECTION_____________________
 
@@ -52,16 +54,18 @@ save(txi_iso, sample_info, file = "./data/isoforms_data.RData")
 #cell type: tests for effect of different cell types in isoform expression
 #karyotype:cell type: test wehather the effect of karyotype on isoform expression is different in different cell types
 
-design_formula <- ~ Sequencing_Batch + Cell_Type + Karyotype + Karyotype:Cell_Type
+design_formula <- ~ Sequencing_Batch + Cell_Type + Karyotype + Karyotype:Cell_Type #Initial model
+#design_formula <- ~ Sequencing_Batch + Time + Cell_Type + Karyotype + Karyotype:Cell_Type # add a term in the correction to consider old and new machines
+
 dds_iso <- DESeqDataSetFromTximport(txi_iso, colData = sample_info, design = design_formula)
 #Save the DESeqDataSet object from raw counts /data/raw_counts_isoforms.RData"
-save(dds_iso, file = "../Large_Files_No_repo/raw_counts_isoforms.RData")
+save(dds_iso, file = "../Large_Files_No_repo/dds_isoforms.RData")
 #Apply variance stabilizing transformation to stabilize the variance across the mean for PCA and other plots
 vsd_iso <- vst(dds_iso, blind = FALSE)
 #Save the variance stabilized transformed counts
 save(vsd_iso, file = "../Large_Files_No_repo/vst_counts_isoforms.RData")
 #Calculate PCA
-pcaData_iso <- plotPCA(vsd_iso, intgroup=c("Sequencing_Batch", "Karyotype", "Cell_Type"), returnData=TRUE)
+pcaData_iso <- plotPCA(vsd_iso, intgroup=c("Sequencing_Batch", "Karyotype", "Cell_Type","Time"), returnData=TRUE)
 percentVar_iso <- round(100 * attr(pcaData_iso, "percentVar"))
 #Save PCA data and variance explained
 save(pcaData_iso, percentVar_iso, file = "./data/pca_isoforms.RData")
@@ -91,12 +95,20 @@ pca_cell_type <- ggplot(pcaData_iso, aes(x = PC1, y = PC2, color = Cell_Type)) +
   ggtitle("PCA by Cell Type") +
   theme_minimal()
 
+#PCA colored by Time
+pca_time <- ggplot(pcaData_iso, aes(x = PC1, y = PC2, color = Time)) +
+  geom_point(size = 3) +
+  xlab(paste0("PC1: ", percentVar_iso[1], "% variance")) +
+  ylab(paste0("PC2: ", percentVar_iso[2], "% variance")) +
+  ggtitle("PCA by Sequencer Time") +
+  theme_minimal()
+
 #Combine PCA plots in a single plot 
-pca_iso <- pca_batch + pca_karyotype + pca_cell_type + plot_layout(ncol = 3)
+pca_iso <- pca_batch + pca_karyotype + pca_cell_type + pca_time + plot_layout(nrow = 2, ncol = 2)
 #Display the PCA plot
 print(pca_iso)
 #Save the PCA plot
-ggsave("./plots/PCA_isoforms.png", pca_iso, width = 12, height = 6)
+ggsave("./plots/PCA_isoforms_sequencer_batch.png", pca_iso, width = 12, height = 6)
 
 #_______________BATCH CORRECTION WITH COMBAT-SEQ_____________________
 
@@ -104,7 +116,12 @@ ggsave("./plots/PCA_isoforms.png", pca_iso, width = 12, height = 6)
 #Combat-Seq works with raw RNA-seq counts and correct for batch effects without transforming the data. 
 #This method is particularly useful to maintain the original count distribution.
 
-iso_corrected <- ComBat_seq(counts = counts(dds_iso), batch = sample_info$Sequencing_Batch)
+# Combine Sequencing_Batch and Time into a single composite batch variable
+sample_info$Composite_Batch <- interaction(sample_info$Sequencing_Batch, sample_info$Time)
+
+# Perform batch correction using the composite batch variable
+#iso_corrected <- ComBat_seq(counts = counts(dds_iso), batch = sample_info$Composite_Batch)
+iso_corrected <- ComBat_seq(counts = counts(dds_iso), batch = sample_info$Sequencing_Batch) #old version without sequencer time
 #Save the corrected counts
 save(iso_corrected, file = "../Large_Files_No_repo/combat_seq_counts_isoforms.RData")
 #Create a DESeqDataSet object with the corrected data
@@ -116,7 +133,7 @@ save(dds_iso_corrected, file = "../Large_Files_No_repo/dds_iso_corrected_combat_
 #vst transformation for PCA plotting 
 vsd_iso_corrected <- vst(dds_iso_corrected, blind = FALSE)
 #Calculate PCA
-pcaData_iso_corrected <- plotPCA(vsd_iso_corrected, intgroup=c("Sequencing_Batch", "Karyotype", "Cell_Type"), returnData=TRUE)
+pcaData_iso_corrected <- plotPCA(vsd_iso_corrected, intgroup=c("Sequencing_Batch", "Karyotype", "Cell_Type", "Time"), returnData=TRUE)
 percentVar_iso_corrected <- round(100 * attr(pcaData_iso_corrected, "percentVar"))
 #Save PCA data and variance explained
 save(pcaData_iso_corrected, percentVar_iso_corrected, file = "./data/pca_iso_combat_seq.RData")
@@ -142,12 +159,19 @@ pca_cell_type_corrected <- ggplot(pcaData_iso_corrected, aes(x = PC1, y = PC2, c
   ylab(paste0("PC2: ", percentVar_iso_corrected[2], "% variance")) +
   ggtitle("PCA by Cell Type (Corrected)") +
   theme_minimal()
- #Combine PCA plots in a single plot
-pca_iso_corrected <- pca_batch_corrected + pca_karyotype_corrected + pca_cell_type_corrected + plot_layout(ncol = 3)
+#Plot PCA by Time
+pca_time_corrected <- ggplot(pcaData_iso_corrected, aes(x = PC1, y = PC2, color = Time)) +
+  geom_point(size = 3) +
+  xlab(paste0("PC1: ", percentVar_iso_corrected[1], "% variance")) +
+  ylab(paste0("PC2: ", percentVar_iso_corrected[2], "% variance")) +
+  ggtitle("PCA by Sequencer Time (Corrected)") +
+  theme_minimal()
+#Combine PCA plots in a single plot
+pca_iso_corrected <- pca_batch_corrected + pca_karyotype_corrected + pca_cell_type_corrected + pca_time_corrected + plot_layout(nrow = 2, ncol = 2)
 #Display the PCA plot
 print(pca_iso_corrected)
 #Save the PCA plot
-ggsave("./plots/PCA_isoforms_corrected.png", pca_iso_corrected, width = 12, height = 6)  
+ggsave("./plots/PCA_isoforms_corrected_combatseq_sequencer_batch.png", pca_iso_corrected, width = 12, height = 6)  
 
 #_______________BATCH CORRECTION COMBAT_____________________
 
