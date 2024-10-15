@@ -21,9 +21,9 @@ library(UpSetR)
 # This model includes an interaction term, allowing to test how the effect of aneuploidy level across different cell types. 
 #This is useful to test the hypothesis that karyotype effects are different in iPSCs versus NSCs or Neurons.
 
-# Load the combat-seq corrected data
-load("../Large_Files_No_repo/combat_seq_counts_isoforms.RData")
-# Load the sample information
+# Load the combat-seq corrected data - object iso_corrected
+load("../Large_Files_No_repo/combat_seq_counts_isoforms_HTSFiltered.RData")
+# Load the sample information, taking the sample_info object
 load("../Large_Files_No_repo/isoforms_data.RData")
 
 dds_combat_seq <- DESeqDataSetFromMatrix(countData = iso_corrected,
@@ -146,13 +146,28 @@ res_HGA_Neurons_annotated <- merge(res_HGA_Neurons_df, annot_hga_neurons_ensembl
 colnames(res_HGA_Neurons_annotated)[1] <- "transcript_id"
 colnames(res_HGA_Neurons_annotated)[8] <- "chromosome"
 
+#________________________COMPLETING MISSING ANNOTATIONS________________________
+# THIS IS AN EXAMPLE OF HOW TO COMPLETE MISSING ANNOTATIONS USING BIOMART DATA
+#load biomart data
+biomart_data <- read.csv("../Large_Files_No_repo/MissingAnnot_HGA_neurons.txt", sep = "\t", header = TRUE)
+dim(biomart_data)
+# identify Rows with missing annotations
+missing_annot <- res_HGA_Neurons_annotated[is.na(res_HGA_Neurons_annotated$chromosome), ]
+dim(missing_annot)
+# Merge the missing annotations with the biomart data
+annotated_missing <- merge(missing_annot, biomart_data, by = "transcript_id", all.x = TRUE)
+# Remove redundant columns
+annotated_missing <- annotated_missing[, -c(8:16)]
+# Save the annotated missing data
+write.xlsx(annotated_missing, file = "../results/MissingAnnot_HGA_Neurons.xlsx")
+
 #________________________SAVE RESULTS________________________
 #SAVE RESULTS
 # Save results to the same excel file with multiple sheets
 write.xlsx(list("KS_iPSCs" = res_KS_iPSCs_annotated, "HGA_iPSCs" = res_HGA_iPSCs_annotated,
                 "KS_NSCs" = res_KS_NSCs_annotated, "HGA_NSCs" = res_HGA_NSCs_annotated,
                 "KS_Neurons" = res_KS_Neurons_annotated, "HGA_Neurons" = res_HGA_Neurons_annotated),
-           file = "../results/DTE_results.xlsx")
+           file = "../results/DTE_results_2run.xlsx")
 
 #________________________VISUALIZE RESULTS________________________
 
