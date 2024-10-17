@@ -169,22 +169,31 @@ write.xlsx(list("KS_iPSCs" = res_KS_iPSCs_annotated, "HGA_iPSCs" = res_HGA_iPSCs
                 "KS_Neurons" = res_KS_Neurons_annotated, "HGA_Neurons" = res_HGA_Neurons_annotated),
            file = "../results/DTE_results_2run.xlsx")
 
+#________________________LOAD RESULTS________________________
+# Load the DTE results from an excel file
+res_KS_iPSCs_annotated <- read.xlsx("../results/DTE_results_2run.xlsx", sheet = "KS_iPSCs", detectDates = FALSE)
+res_HGA_iPSCs_annotated <- read.xlsx("../results/DTE_results_2run.xlsx", sheet = "HGA_iPSCs", detectDates = FALSE)
+res_KS_NSCs_annotated <- read.xlsx("../results/DTE_results_2run.xlsx", sheet = "KS_NSCs", detectDates = FALSE)
+res_HGA_NSCs_annotated <- read.xlsx("../results/DTE_results_2run.xlsx", sheet = "HGA_NSCs", detectDates = FALSE)
+res_KS_Neurons_annotated <- read.xlsx("../results/DTE_results_2run.xlsx", sheet = "KS_Neurons", detectDates = FALSE)
+res_HGA_Neurons_annotated <- read.xlsx("../results/DTE_results_2run.xlsx", sheet = "HGA_Neurons", detectDates = FALSE)
+
 #________________________VISUALIZE RESULTS________________________
 
 #________________________PLOT NUMBER OF SIGNIFICANT TRANSCRIPTS:BARPLOT________________________
 # Funtion to count number of significant upregulated and downregulated transcripts
 count_sig <- function(res){
-  up <- sum(res$log2FoldChange > 0 & res$padj < 0.05, na.rm = TRUE)
-  down <- sum(res$log2FoldChange < 0 & res$padj < 0.05, na.rm = TRUE)
+  up <- sum(res$log2FoldChange > 0.58 & res$padj < 0.05, na.rm = TRUE)
+  down <- sum(res$log2FoldChange < -0.58 & res$padj < 0.05, na.rm = TRUE)
   return(c(Upregulated = up, Downregulated = down))
 }
 # Count number of significant upregulated and downregulated transcripts for each condition and cell type
-counts_ks_ipscs <- count_sig(res_KS_iPSCs)
-counts_hga_ipscs <- count_sig(res_HGA_iPSCs)
-counts_ks_nscs <- count_sig(res_KS_NSCs)
-counts_hga_nscs <- count_sig(res_HGA_NSCs)
-counts_ks_neurons <- count_sig(res_KS_Neurons)
-counts_hga_neurons <- count_sig(res_HGA_Neurons)
+counts_ks_ipscs <- count_sig(res_KS_iPSCs_annotated)
+counts_hga_ipscs <- count_sig(res_HGA_iPSCs_annotated)
+counts_ks_nscs <- count_sig(res_KS_NSCs_annotated)
+counts_hga_nscs <- count_sig(res_HGA_NSCs_annotated)
+counts_ks_neurons <- count_sig(res_KS_Neurons_annotated)
+counts_hga_neurons <- count_sig(res_HGA_Neurons_annotated)
 
 # Create a data frame with the counts for plotting
 df_counts <- data.frame(
@@ -212,17 +221,17 @@ ggplot(df_counts_melt, aes(x = Celltype, y = Count, fill = Direction)) +
     theme_minimal() + scale_fill_manual(values = c("upreg" = "gold", "downreg" = "purple"))
 
 #Save the plot
-ggsave("./plots/DTE_summary.png", width = 8, height = 6, units = "in")
+ggsave("./plots/DTE_summary_run2.png", width = 8, height = 6, units = "in")
 
 #________________________PLOT UPSET PLOTS________________________
 
-#Load the DTE results from an excel file
-res_KS_iPSCs_annotated <- read.xlsx("../results/DTE_results.xlsx", sheet = "KS_iPSCs", detectDates = FALSE)
-res_HGA_iPSCs_annotated <- read.xlsx("../results/DTE_results.xlsx", sheet = "HGA_iPSCs", detectDates = FALSE)
-res_KS_NSCs_annotated <- read.xlsx("../results/DTE_results.xlsx", sheet = "KS_NSCs", detectDates = FALSE)
-res_HGA_NSCs_annotated <- read.xlsx("../results/DTE_results.xlsx", sheet = "HGA_NSCs", detectDates = FALSE)
-res_KS_Neurons_annotated <- read.xlsx("../results/DTE_results.xlsx", sheet = "KS_Neurons", detectDates = FALSE)
-res_HGA_Neurons_annotated <- read.xlsx("../results/DTE_results.xlsx", sheet = "HGA_Neurons", detectDates = FALSE)
+#Filter the results to keep only significant transcripts (log2fc > 0.58 or log2fc < -0.58 and padj < 0.05)
+res_KS_iPSCs_annotated <- res_KS_iPSCs_annotated[which(res_KS_iPSCs_annotated$log2FoldChange > 0.58 | res_KS_iPSCs_annotated$log2FoldChange < -0.58 & res_KS_iPSCs_annotated$padj < 0.05), ]
+res_HGA_iPSCs_annotated <- res_HGA_iPSCs_annotated[which(res_HGA_iPSCs_annotated$log2FoldChange > 0.58 | res_HGA_iPSCs_annotated$log2FoldChange < -0.58 & res_HGA_iPSCs_annotated$padj < 0.05), ]
+res_KS_NSCs_annotated <- res_KS_NSCs_annotated[which(res_KS_NSCs_annotated$log2FoldChange > 0.58 | res_KS_NSCs_annotated$log2FoldChange < -0.58 & res_KS_NSCs_annotated$padj < 0.05), ]
+res_HGA_NSCs_annotated <- res_HGA_NSCs_annotated[which(res_HGA_NSCs_annotated$log2FoldChange > 0.58 | res_HGA_NSCs_annotated$log2FoldChange < -0.58 & res_HGA_NSCs_annotated$padj < 0.05), ]
+res_KS_Neurons_annotated <- res_KS_Neurons_annotated[which(res_KS_Neurons_annotated$log2FoldChange > 0.58 | res_KS_Neurons_annotated$log2FoldChange < -0.58 & res_KS_Neurons_annotated$padj < 0.05), ]
+res_HGA_Neurons_annotated <- res_HGA_Neurons_annotated[which(res_HGA_Neurons_annotated$log2FoldChange > 0.58 | res_HGA_Neurons_annotated$log2FoldChange < -0.58 & res_HGA_Neurons_annotated$padj < 0.05), ]
 
 # Fix rownames
 rownames(res_KS_iPSCs_annotated) <- res_KS_iPSCs_annotated$transcript_id
@@ -269,7 +278,7 @@ upset_ks_ipscs <- list(KS_iPSCs_Up = res_KS_iPSCs_up_down$up,
 # convert the list to a format suitable for UpSetR
 upset_data_ipscs <- fromList(upset_ks_ipscs)
 #Generate the UpSet plot
-pdf(file = "./plots/DTE_upset_ipscs.pdf", width = 10, height = 10)
+pdf(file = "./plots/DTE_upset_ipscs_run2.pdf", width = 10, height = 10)
 upset(upset_data_ipscs, sets = names(upset_ks_ipscs),
       keep.order = TRUE,
       order.by = "freq",
@@ -285,7 +294,7 @@ upset_ks_nscs <- list(KS_NSCs_Up = res_KS_NSCs_up_down$up,
 # convert the list to a format suitable for UpSetR
 upset_data_nscs <- fromList(upset_ks_nscs)
 #Generate the UpSet plot
-pdf(file = "./plots/DTE_upset_nscs.pdf", width = 10, height = 10)
+pdf(file = "./plots/DTE_upset_nscs_run2.pdf", width = 10, height = 10)
 upset(upset_data_nscs, sets = names(upset_ks_nscs),
       keep.order = TRUE,
       order.by = "freq",
@@ -300,7 +309,7 @@ upset_ks_neurons <- list(KS_Neurons_Up = res_KS_Neurons_up_down$up,
 # convert the list to a format suitable for UpSetR
 upset_data_neurons <- fromList(upset_ks_neurons)
 #Generate the UpSet plot
-pdf(file = "./plots/DTE_upset_neurons.pdf", width = 10, height = 10)
+pdf(file = "./plots/DTE_upset_neurons_run2.pdf", width = 10, height = 10)
 upset(upset_data_neurons, sets = names(upset_ks_neurons),
       keep.order = TRUE,
       order.by = "freq",
@@ -318,7 +327,7 @@ upset_ks_all <- list(KS_iPSCs_Up = res_KS_iPSCs_up_down$up,
 # convert the list to a format suitable for UpSetR
 upset_data_ks_all <- fromList(upset_ks_all)
 #Generate the UpSet plot
-pdf(file = "./plots/DTE_upset_ks_all.pdf", width = 10, height = 10)
+pdf(file = "./plots/DTE_upset_ks_all_run2.pdf", width = 10, height = 10)
 upset(upset_data_ks_all, sets = names(upset_ks_all),
       keep.order = TRUE,
       order.by = "freq",
@@ -335,7 +344,7 @@ upset_hga_all <- list(HGA_iPSCs_Up = res_HGA_iPSCs_up_down$up,
 # convert the list to a format suitable for UpSetR
 upset_data_hga_all <- fromList(upset_hga_all)
 #Generate the UpSet plot
-pdf(file = "./plots/DTE_upset_hga_all.pdf", width = 10, height = 10)
+pdf(file = "./plots/DTE_upset_hga_all_run2.pdf", width = 10, height = 10)
 upset(upset_data_hga_all, sets = names(upset_hga_all),
       keep.order = TRUE,
       order.by = "freq",
@@ -368,13 +377,11 @@ process_common_transcripts <- function(res_1, res_2, res_df1, res_df2, dir1, dir
     if (!is.data.frame(res)) {
       stop("The input 'res' is not a data frame.")
     }
-    
     # Check if common contains valid row names
     valid_rows <- rownames(res) %in% common
     if (sum(valid_rows) == 0) {
       stop("No common transcripts found in the row names of 'res'.")
     }
-    
     common_res <- res[valid_rows, ]
     return(common_res)
   }
@@ -399,33 +406,33 @@ process_common_transcripts <- function(res_1, res_2, res_df1, res_df2, dir1, dir
 
 # Process common transcripts in iPSCs:
 # KS vs HGA in Upregulated transcripts
-process_common_transcripts(res_KS_iPSCs_up_down, res_HGA_iPSCs_up_down, res_KS_iPSCs_annotated, res_HGA_iPSCs_annotated, "up", "up", "_KS", "_HGA", "../results/upset_upregulated_iPSCs.xlsx")
+process_common_transcripts(res_KS_iPSCs_up_down, res_HGA_iPSCs_up_down, res_KS_iPSCs_annotated, res_HGA_iPSCs_annotated, "up", "up", "_KS", "_HGA", "../results/upset_upregulated_iPSCs_run2.xlsx")
 # KS vs HGA in Downregulated transcripts
-process_common_transcripts(res_KS_iPSCs_up_down, res_HGA_iPSCs_up_down, res_KS_iPSCs_annotated, res_HGA_iPSCs_annotated, "down", "down", "_KS", "_HGA", "../results/upset_downregulated_iPSCs.xlsx")
+process_common_transcripts(res_KS_iPSCs_up_down, res_HGA_iPSCs_up_down, res_KS_iPSCs_annotated, res_HGA_iPSCs_annotated, "down", "down", "_KS", "_HGA", "../results/upset_downregulated_iPSCs_run2.xlsx")
 # KS vs HGA upregulated to downregulated transcripts
-process_common_transcripts(res_KS_iPSCs_up_down, res_HGA_iPSCs_up_down, res_KS_iPSCs_annotated, res_HGA_iPSCs_annotated, "up", "down", "_KS", "_HGA", "../results/upset_up_to_down_iPSCs.xlsx")
+process_common_transcripts(res_KS_iPSCs_up_down, res_HGA_iPSCs_up_down, res_KS_iPSCs_annotated, res_HGA_iPSCs_annotated, "up", "down", "_KS", "_HGA", "../results/upset_up_to_down_iPSCs_run2.xlsx")
 # KS vs HGA downregulated to upregulated transcripts
-process_common_transcripts(res_KS_iPSCs_up_down, res_HGA_iPSCs_up_down, res_KS_iPSCs_annotated, res_HGA_iPSCs_annotated, "down", "up", "_KS", "_HGA", "../results/upset_down_to_up_iPSCs.xlsx")
+process_common_transcripts(res_KS_iPSCs_up_down, res_HGA_iPSCs_up_down, res_KS_iPSCs_annotated, res_HGA_iPSCs_annotated, "down", "up", "_KS", "_HGA", "../results/upset_down_to_up_iPSCs_run2.xlsx")
 
 # Process common transcripts in NSCs:
 # KS vs HGA in Upregulated transcripts
-process_common_transcripts(res_KS_NSCs_up_down, res_HGA_NSCs_up_down, res_KS_NSCs_annotated, res_HGA_NSCs_annotated, "up", "up", "_KS", "_HGA", "../results/upset_upregulated_NSCs.xlsx")
+process_common_transcripts(res_KS_NSCs_up_down, res_HGA_NSCs_up_down, res_KS_NSCs_annotated, res_HGA_NSCs_annotated, "up", "up", "_KS", "_HGA", "../results/upset_upregulated_NSCs_run2.xlsx")
 # KS vs HGA in Downregulated transcripts
-process_common_transcripts(res_KS_NSCs_up_down, res_HGA_NSCs_up_down, res_KS_NSCs_annotated, res_HGA_NSCs_annotated, "down", "down", "_KS", "_HGA", "../results/upset_downregulated_NSCs.xlsx")
+process_common_transcripts(res_KS_NSCs_up_down, res_HGA_NSCs_up_down, res_KS_NSCs_annotated, res_HGA_NSCs_annotated, "down", "down", "_KS", "_HGA", "../results/upset_downregulated_NSCs_run2.xlsx")
 # KS vs HGA upregulated to downregulated transcripts
-process_common_transcripts(res_KS_NSCs_up_down, res_HGA_NSCs_up_down, res_KS_NSCs_annotated, res_HGA_NSCs_annotated, "up", "down", "_KS", "_HGA", "../results/upset_up_to_down_NSCs.xlsx")
+process_common_transcripts(res_KS_NSCs_up_down, res_HGA_NSCs_up_down, res_KS_NSCs_annotated, res_HGA_NSCs_annotated, "up", "down", "_KS", "_HGA", "../results/upset_up_to_down_NSCs_run2.xlsx")
 # KS vs HGA downregulated to upregulated transcripts
-process_common_transcripts(res_KS_NSCs_up_down, res_HGA_NSCs_up_down, res_KS_NSCs_annotated, res_HGA_NSCs_annotated, "down", "up", "_KS", "_HGA", "../results/upset_down_to_up_NSCs.xlsx")
+process_common_transcripts(res_KS_NSCs_up_down, res_HGA_NSCs_up_down, res_KS_NSCs_annotated, res_HGA_NSCs_annotated, "down", "up", "_KS", "_HGA", "../results/upset_down_to_up_NSCs_run2.xlsx")
 
 # Process common transcripts in Neurons:
 # KS vs HGA in Upregulated transcripts
-process_common_transcripts(res_KS_Neurons_up_down, res_HGA_Neurons_up_down, res_KS_Neurons_annotated, res_HGA_Neurons_annotated, "up", "up", "_KS", "_HGA", "../results/upset_upregulated_Neurons.xlsx")
+process_common_transcripts(res_KS_Neurons_up_down, res_HGA_Neurons_up_down, res_KS_Neurons_annotated, res_HGA_Neurons_annotated, "up", "up", "_KS", "_HGA", "../results/upset_upregulated_Neurons_run2.xlsx")
 # KS vs HGA in Downregulated transcripts
-process_common_transcripts(res_KS_Neurons_up_down, res_HGA_Neurons_up_down, res_KS_Neurons_annotated, res_HGA_Neurons_annotated, "down", "down", "_KS", "_HGA", "../results/upset_downregulated_Neurons.xlsx")
+process_common_transcripts(res_KS_Neurons_up_down, res_HGA_Neurons_up_down, res_KS_Neurons_annotated, res_HGA_Neurons_annotated, "down", "down", "_KS", "_HGA", "../results/upset_downregulated_Neurons_run2.xlsx")
 # KS vs HGA upregulated to downregulated transcripts
-process_common_transcripts(res_KS_Neurons_up_down, res_HGA_Neurons_up_down, res_KS_Neurons_annotated, res_HGA_Neurons_annotated, "up", "down", "_KS", "_HGA", "../results/upset_up_to_down_Neurons.xlsx")
+process_common_transcripts(res_KS_Neurons_up_down, res_HGA_Neurons_up_down, res_KS_Neurons_annotated, res_HGA_Neurons_annotated, "up", "down", "_KS", "_HGA", "../results/upset_up_to_down_Neurons_run2.xlsx")
 # KS vs HGA downregulated to upregulated transcripts
-process_common_transcripts(res_KS_Neurons_up_down, res_HGA_Neurons_up_down, res_KS_Neurons_annotated, res_HGA_Neurons_annotated, "down", "up", "_KS", "_HGA", "../results/upset_down_to_up_Neurons.xlsx")
+process_common_transcripts(res_KS_Neurons_up_down, res_HGA_Neurons_up_down, res_KS_Neurons_annotated, res_HGA_Neurons_annotated, "down", "up", "_KS", "_HGA", "../results/upset_down_to_up_Neurons_run2.xlsx")
 
 # Independent processing to get the common transcripts between all cell types by karyotype
 # KS upregulated transcripts
@@ -463,7 +470,7 @@ common_ks_up_merged <- common_ks_up_merged[, -c(7:15, 22:30)]
 colnames(common_ks_up_merged) <- gsub("\\.x", "_iPSCs", colnames(common_ks_up_merged))
 colnames(common_ks_up_merged) <- gsub("\\.y", "_NSCs", colnames(common_ks_up_merged))
 # Save the results
-write.xlsx(common_ks_up_merged, file = "../results/common_upregulated_KS_all.xlsx")
+write.xlsx(common_ks_up_merged, file = "../results/common_upregulated_KS_all.xlsx", rowNames = TRUE)
 
 #downregulated KS
 common_ks_down_i <- map_common_transcripts(common_ks_down, res_KS_iPSCs_annotated)
@@ -489,7 +496,7 @@ common_ks_down_merged <- common_ks_down_merged[, -c(7:15, 22:30)]
 colnames(common_ks_down_merged) <- gsub("\\.x", "_iPSCs", colnames(common_ks_down_merged))
 colnames(common_ks_down_merged) <- gsub("\\.y", "_NSCs", colnames(common_ks_down_merged))
 # Save the results
-write.xlsx(common_ks_down_merged, file = "../results/common_downregulated_KS_all.xlsx")
+write.xlsx(common_ks_down_merged, file = "../results/common_downregulated_KS_all.xlsx", rowNames = TRUE)
 
 #upregulated HGA
 common_hga_up_i <- map_common_transcripts(common_hga_up, res_HGA_iPSCs_annotated)
@@ -515,7 +522,7 @@ common_hga_up_merged <- common_hga_up_merged[, -c(7:15, 22:30)]
 colnames(common_hga_up_merged) <- gsub("\\.x", "_iPSCs", colnames(common_hga_up_merged))
 colnames(common_hga_up_merged) <- gsub("\\.y", "_NSCs", colnames(common_hga_up_merged))
 # Save the results
-write.xlsx(common_hga_up_merged, file = "../results/common_upregulated_HGA_all.xlsx")
+write.xlsx(common_hga_up_merged, file = "../results/common_upregulated_HGA_all.xlsx", rowNames = TRUE)
 
 #downregulated HGA
 common_hga_down_i <- map_common_transcripts(common_hga_down, res_HGA_iPSCs_annotated)
@@ -541,4 +548,4 @@ common_hga_down_merged <- common_hga_down_merged[, -c(7:15, 22:30)]
 colnames(common_hga_down_merged) <- gsub("\\.x", "_iPSCs", colnames(common_hga_down_merged))
 colnames(common_hga_down_merged) <- gsub("\\.y", "_NSCs", colnames(common_hga_down_merged))
 # Save the results
-write.xlsx(common_hga_down_merged, file = "../results/common_downregulated_HGA_all.xlsx")
+write.xlsx(common_hga_down_merged, file = "../results/common_downregulated_HGA_all.xlsx", row.names = TRUE)
