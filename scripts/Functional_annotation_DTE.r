@@ -8,16 +8,21 @@ library(ReactomePA)
 library(ggplot2)
 library(openxlsx)
 
+
 # Load the differentially expressed transcripts optimized
 # Define the sheet names, change as needed
-#sheet_names <- c("Common_up", "Common_down", "Common_up_to_down", "Common_down_to_up")  # Add all the sheet names you want to load
-sheet_names <- c("Common_up", "Common_down") 
+sheet_names <- c("Common_up", "Common_down", "Up_to_down", "down_to_up")  # Add all the sheet names you want to load
+#sheet_names <- c("Common_up", "Common_down") 
 # Initialize an empty list to store the data frames
 data_frames <- list()
 # Column number to check for NA values
-column_number <- 24  # Change this to the appropriate column number (gene_id)
+column_number <- 25  # Change this to the appropriate column number (gene_id)
 # File with the intersections,change as needed
-file <- "../results/upset_intersections_HGA.xlsx"
+#file <- "./results/upset_intersections_iPSCs_run2.xlsx"
+#file <- "./results/upset_intersections_NSCs_run2.xlsx"
+#file <- "./results/upset_intersections_Neurons_run2.xlsx"
+#file <- "./results/common_intersect_KS_all.xlsx"
+file <- "./results/common_intersect_HGA_all.xlsx"
 
 # Loop through the sheet names and read each sheet into a data frame
 for (sheet in sheet_names) {
@@ -33,19 +38,20 @@ for (sheet in sheet_names) {
 #IPSCs
 det_ipscs_up <- data_frames[["Common_up"]]
 det_ipscs_down <- data_frames[["Common_down"]]
-det_ipscs_up_to_down <- data_frames[["Common_up_to_down"]]
-det_ipscs_down_to_up <- data_frames[["Common_down_to_up"]]
+det_ipscs_up_to_down <- data_frames[["Up_to_down"]]
+det_ipscs_down_to_up <- data_frames[["down_to_up"]]
+
 #NSCs
 det_nscs_up <- data_frames[["Common_up"]]
 det_nscs_down <- data_frames[["Common_down"]]
-det_nscs_up_to_down <- data_frames[["Common_up_to_down"]]
-det_nscs_down_to_up <- data_frames[["Common_down_to_up"]]
+det_nscs_up_to_down <- data_frames[["Up_to_down"]]
+det_nscs_down_to_up <- data_frames[["down_to_up"]]
 
 #Neurons
 det_neurons_up <- data_frames[["Common_up"]]
 det_neurons_down <- data_frames[["Common_down"]]
-det_neurons_up_to_down <- data_frames[["Common_up_to_down"]]
-det_neurons_down_to_up <- data_frames[["Common_down_to_up"]]
+det_neurons_up_to_down <- data_frames[["Up_to_down"]]
+det_neurons_down_to_up <- data_frames[["down_to_up"]]
 
 #KS
 det_ks_up <- data_frames[["Common_up"]]
@@ -58,18 +64,23 @@ det_hga_down <- data_frames[["Common_down"]]
 #________________________________DEFINING BACKGROUND FOR ORA ANALYSIS______________________________________
 
 #define the background gene set
-#using lowly expressed genes as background
-load("../Large_Files_No_repo/combat_seq_counts_isoforms.RData") # iso_corrected
+#using lowly expressed genes as background: It is usually better to start with the ComBat-Seq corrected counts 
+#since they account for technical variation such as batch effects, which can particularly affect lowly expressed genes.
+#The corrected counts should provide a more reliable basis for determining the expression distribution.
+
+load("../Large_Files_No_repo/combat_seq_counts_isoforms_HTSFiltered.RData") # iso_corrected
 # get the lowly expressed genes by calculating the mean of the counts of all samples
 av_expr <- rowMeans(iso_corrected)
 # set a threshold at the 10th percentile of the expression distribution
-threshold <- quantile(av_expr, 0.2)
+threshold <- quantile(av_expr, 0.25)
 # Identify transcripts with low expression
 lowly_expressed <- rownames(iso_corrected)[av_expr < threshold]
+#Check how many transcripts are lowly expressed
+length(lowly_expressed) # 4670 transcripts
 # convert the transcript ids to entrez ids
 lowly_expressed_entrez <- mapIds(org.Hs.eg.db, keys = lowly_expressed, column = "ENTREZID", keytype = "ENSEMBLTRANS",multiVals = "first")
 # Remove NA values
-lowly_expressed_entrez <- lowly_expressed_entrez[!is.na(lowly_expressed_entrez)] # 40k transcripts mapped to 6577 genes
+lowly_expressed_entrez <- lowly_expressed_entrez[!is.na(lowly_expressed_entrez)] # 4.6k transcripts mapped to 388 genes
 
 #________________________________FUNCTION TO PERFORM ENRICHMENT ANALYSIS______________________________________
 
@@ -127,24 +138,35 @@ results_down_hga <- perform_enrichment_analysis(det_hga_down, "gene_id", lowly_e
 
 
 # Save the results of those that produced significant enrichment in iPCSs
-write.xlsx(results_up_to_down_ipscs$kegg_results, file = "../results/KEGG_up_to_down_iPSCs.xlsx")
+write.xlsx(results_up_ipscs$kegg_results, file = "../results/KEGG_up_iPSCs_v2.xlsx")
+write.xlsx(results_up_to_down_ipscs$kegg_results, file = "../results/KEGG_up_to_down_iPSCs_v2.xlsx")
 # Plot the results from the KEGG enrichment analysis in the significant in iPCSs
-dotplot(results_up_to_down_ipscs$kegg_enrichment, showCategory = 10)
+dotplot(results_up_ipscs$kegg_enrichment, showCategory = 10)
 # Save the plot
-ggsave("./plots/KEGG_up_to_down_iPSCs.png")
+ggsave("./plots/KEGG_up_iPSCs_v2.png")
+dotplot(results_up_to_down_ipscs$kegg_enrichment, showCategory = 10)
+ggsave("./plots/KEGG_up_to_down_iPSCs_v2.png")
 
 
 # Save the results of those that produced significant enrichment in NSCs
-write.xlsx(results_up_nscs$kegg_results, file = "../results/KEGG_common_up_NSCs.xlsx")
-write.xlsx(results_down_nscs$kegg_results, file = "../results/KEGG_common_down_NSCs.xlsx")
+write.xlsx(results_up_nscs$kegg_results, file = "../results/KEGG_common_up_NSCs_v2.xlsx")
+write.xlsx(results_up_to_down_nscs$kegg_results, file = "../results/KEGG_common_up_to_down_NSCs_v2.xlsx")
 # Plot the results from the KEGG enrichment analysis in the significant in NSCs
 dotplot(results_up_nscs$kegg_enrichment, showCategory = 10)
-dotplot(results_down_nscs$kegg_enrichment, showCategory = 10)
+dotplot(results_up_to_down_nscs$kegg_enrichment, showCategory = 10)
 # Save the plot
-ggsave("./plots/KEGG_common_up_NSCs.png")
-ggsave("./plots/KEGG_common_down_NSCs.png")
+ggsave("./plots/KEGG_common_up_NSCs_v2.png")
+ggsave("./plots/KEGG_common_up_to_down_NSCs_v2.png")
 
-#Nothing significant in Neurons
+# Neurons
+write.xlsx(results_up_neurons$kegg_results, file = "../results/KEGG_common_up_Neurons.xlsx")
+write.xlsx(results_up_to_down_neurons$kegg_results, file = "../results/KEGG_common_up_to_down_Neurons.xlsx")
+#plot the results from the KEGG enrichment analysis in the significant in Neurons
+dotplot(results_up_neurons$kegg_enrichment, showCategory = 10)
+ggsave("./plots/KEGG_common_up_Neurons_v2.png")
+dotplot(results_up_to_down_neurons$kegg_enrichment, showCategory = 10)
+ggsave("./plots/KEGG_common_up_to_down_Neurons_v2.png")
+
 
 # Save the results of those that produced significant enrichment in KS
 write.xlsx(results_up_ks$kegg_results, file = "../results/KEGG_common_up_KS.xlsx")
