@@ -549,3 +549,63 @@ colnames(common_hga_down_merged) <- gsub("\\.x", "_iPSCs", colnames(common_hga_d
 colnames(common_hga_down_merged) <- gsub("\\.y", "_NSCs", colnames(common_hga_down_merged))
 # Save the results
 write.xlsx(common_hga_down_merged, file = "../results/common_downregulated_HGA_all.xlsx", row.names = TRUE)
+
+#________________________ADD ANNOTATIONS TO DEGs________________________
+# Load NDD-associated genes list
+ndd_genes <- read.xlsx("../NDD_genes.xlsx", sheet = 1, detectDates = FALSE)
+# Create a function to annotate the DTEs with NDD-associated genes
+annotate_ndd_genes <- function(res, ndd_genes) {
+  # res: data frame with the DTE results
+  # ndd_genes: data frame with the NDD-associated genes
+
+  #Ensure column names are consistent for matching
+  colnames(ndd_genes) <- c("gene_id", "gene_name")
+  #Add a new column to the DTE results to indicate if the gene is NDD-associated
+  res$ndd_associated <- ifelse(res$gene_id %in% ndd_genes$gene_id, "Yes", "No")
+  #Return the updated DTE results
+  return(res)
+}
+
+# Annotate the DTE results with NDD-associated genes
+res_KS_iPSCs_annotated <- annotate_ndd_genes(res_KS_iPSCs_annotated, ndd_genes)
+res_HGA_iPSCs_annotated <- annotate_ndd_genes(res_HGA_iPSCs_annotated, ndd_genes)
+res_KS_NSCs_annotated <- annotate_ndd_genes(res_KS_NSCs_annotated, ndd_genes)
+res_HGA_NSCs_annotated <- annotate_ndd_genes(res_HGA_NSCs_annotated, ndd_genes)
+res_KS_Neurons_annotated <- annotate_ndd_genes(res_KS_Neurons_annotated, ndd_genes)
+res_HGA_Neurons_annotated <- annotate_ndd_genes(res_HGA_Neurons_annotated, ndd_genes)
+
+# Load XCI-status genes list
+
+escapes <- read.xlsx("../DEFINITIVE-LIST-ESCAPE-TUKIANIEN.xlsx", sheet = "escapes_Tukianien_filtered", detectDates = FALSE)
+variable <- read.xlsx("../DEFINITIVE-LIST-ESCAPE-TUKIANIEN.xlsx", sheet = "variable_Tukianien", detectDates = FALSE)
+inactive <- read.xlsx("../DEFINITIVE-LIST-ESCAPE-TUKIANIEN.xlsx", sheet = "inactive_Tukianien", detectDates = FALSE)
+par <- read.xlsx("../DEFINITIVE-LIST-ESCAPE-TUKIANIEN.xlsx", sheet = "PAR_genes", detectDates = FALSE)
+
+# Create a function to annotate the DTEs with XCI-status genes
+annotate_xci_status <- function(dte_data, escapes, variable, inactive, PAR) {
+  # Add a new column for XCI status, default to NA
+  dte_data$XCI_status <- NA
+  
+  # Annotate based on the 4 lists
+  dte_data$XCI_status[dte_data$gene_id %in% escapes$GeneID] <- "escapes"
+  dte_data$XCI_status[dte_data$gene_id %in% variable$GeneID] <- "variable"
+  dte_data$XCI_status[dte_data$gene_id %in% inactive$GeneID] <- "inactive"
+  dte_data$XCI_status[dte_data$gene_id %in% par$GeneID] <- "PAR"
+  
+  # Return the updated DTE dataset
+  return(dte_data)
+}
+
+# Annotate the DTE results with XCI-status genes
+res_KS_iPSCs_annotated <- annotate_xci_status(res_KS_iPSCs_annotated, escapes, variable, inactive, par)
+res_HGA_iPSCs_annotated <- annotate_xci_status(res_HGA_iPSCs_annotated, escapes, variable, inactive, par)
+res_KS_NSCs_annotated <- annotate_xci_status(res_KS_NSCs_annotated, escapes, variable, inactive, par)
+res_HGA_NSCs_annotated <- annotate_xci_status(res_HGA_NSCs_annotated, escapes, variable, inactive, par)
+res_KS_Neurons_annotated <- annotate_xci_status(res_KS_Neurons_annotated, escapes, variable, inactive, par)
+res_HGA_Neurons_annotated <- annotate_xci_status(res_HGA_Neurons_annotated, escapes, variable, inactive, par)
+
+# Save the annotated DTE results to an Excel file
+write.xlsx(list("KS_iPSCs" = res_KS_iPSCs_annotated, "HGA_iPSCs" = res_HGA_iPSCs_annotated,
+                "KS_NSCs" = res_KS_NSCs_annotated, "HGA_NSCs" = res_HGA_NSCs_annotated,
+                "KS_Neurons" = res_KS_Neurons_annotated, "HGA_Neurons" = res_HGA_Neurons_annotated),
+           file = "../results/DTE_results_annotated.xlsx")
