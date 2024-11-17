@@ -609,3 +609,41 @@ write.xlsx(list("KS_iPSCs" = res_KS_iPSCs_annotated, "HGA_iPSCs" = res_HGA_iPSCs
                 "KS_NSCs" = res_KS_NSCs_annotated, "HGA_NSCs" = res_HGA_NSCs_annotated,
                 "KS_Neurons" = res_KS_Neurons_annotated, "HGA_Neurons" = res_HGA_Neurons_annotated),
            file = "../results/DTE_results_annotated.xlsx")
+
+#________________________SUBSET NEURONS RESULTS ACCORDING TO THE TRANSLATION LIST________________________
+
+# Load the neurons DETs
+neurons_ks <- read.xlsx("../results/DTE_results_annotated.xlsx", sheet = "KS_Neurons", detectDates = FALSE)
+neurons_hga <- read.xlsx("../results/DTE_results_annotated.xlsx", sheet = "HGA_Neurons", detectDates = FALSE)
+# Load the translation list
+translation_list <- read.xlsx("../local_translation_genes.xlsx", sheet = 1, detectDates = FALSE)
+
+# Create a function to subset the neurons results based on the translation list
+subset_neuron_results <- function(neurons_data, translation_list) {
+  #Exclude the not differentially expressed transcripts based on the DE column
+  neurons_data <- neurons_data[neurons_data$DE != "NS", ]
+  # Filter the neurons data based on the translation list
+  subset_data <- neurons_data[neurons_data$gene_id %in% translation_list$gene_id, ]
+  return(subset_data)
+}
+# Use the function
+neurons_ks_subset <- subset_neuron_results(neurons_ks, translation_list)
+#check the number of genes in the subset
+nrow(neurons_ks_subset)
+neurons_hga_subset <- subset_neuron_results(neurons_hga, translation_list)
+#check the number of genes in the subset
+nrow(neurons_hga_subset)
+
+# plot a barplot of the log2FoldChange of each transcript in the subset
+neurons_hga_subset <- neurons_hga_subset %>%
+  arrange(gene_name, transcript_id) %>% # Arrange by gene_name and transcript_id
+  mutate(transcript_id = factor(transcript_id, levels = unique(transcript_id))) # Order factor levels
+
+ggplot(neurons_hga_subset, aes(x = transcript_id, y = log2FoldChange, fill = gene_name)) +
+    geom_bar(stat = "identity") +
+    theme_minimal() +
+    theme(axis.text.x = element_text(angle = 90, hjust = 1)) +
+    labs(title = "Log2FoldChange of transcripts involved in local translation in HGA Neurons",
+         x = "Transcript", y = "Log2FoldChange") 
+#save the plot
+ggsave("./plots/translation_genes_hga_neurons.png", width = 8, height = 6, units = "in")
