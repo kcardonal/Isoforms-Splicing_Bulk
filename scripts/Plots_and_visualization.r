@@ -7,12 +7,15 @@ library(openxlsx)
 library(ggrepel)
 library(dplyr)
 library(forcats)
+library(VennDiagram)
+library(grid)
+library(readr)
 
 # Load data: DTE results
 names_sheets <- c("KS_iPSCs", "HGA_iPSCs", "KS_NSCs", "HGA_NSCs", "KS_Neurons", "HGA_Neurons")
 
 dte_results <- lapply(names_sheets, function(sheet) {
-  read.xlsx("./results/DTE_results_2run.xlsx", sheet = sheet)
+  read.xlsx("./results/DTE_results_annotated.xlsx", sheet = sheet)
 })
 
 # Asign names to each data frame
@@ -22,6 +25,21 @@ ks_nscs_res <- dte_results[[3]]
 hga_nscs_res <- dte_results[[4]]
 ks_neurons_res <- dte_results[[5]]
 hga_neurons_res <- dte_results[[6]]
+
+#Load data: DGE results
+names_sheets <- c("iPSCs_47", "iPSCs_HGA", "NSCs_47", "NSCs_HGA", "Neurons_47", "Neurons_HGA")
+
+dge_results <- lapply(names_sheets, function(sheet) {
+  read.xlsx("../results_DGE/DGE_results_annotated.xlsx", sheet = sheet)
+})
+
+# Asign names to each data frame
+ipscs_47_deg <- dge_results[[1]]
+ipscs_hga_deg <- dge_results[[2]]
+nscs_47_deg <- dge_results[[3]]
+nscs_hga_deg <- dge_results[[4]]
+neurons_47_deg <- dge_results[[5]]
+neurons_hga_deg <- dge_results[[6]]
 
 # Plotting diverse statistics
 
@@ -264,3 +282,62 @@ create_xci_pie_chart(res_HGA_NSCs_annotated, "./plots/hga_nscs_xci_status.png")
 create_xci_pie_chart(res_KS_Neurons_annotated, "./plots/ks_neurons_xci_status.png")
 # hga neurons
 create_xci_pie_chart(res_HGA_Neurons_annotated, "./plots/hga_neurons_xci_status.png")
+
+#VENN DIAGRAM TO SHOW THE OVERLAP OF gDTE and DEGs
+
+# Define the function
+compare_gene_lists <- function(dte_data, dge_data, output_prefix) {
+  
+  # Extract unique gene IDs
+  dte_genes <- unique(dte_data$gene_id)
+  dge_genes <- unique(dge_data$ensembl_gene_id)
+
+  # Find the intersection
+  common_genes <- intersect(dte_genes, dge_genes)
+
+  # Create a Venn diagram
+  venn.plot <- draw.pairwise.venn(
+    area1 = length(dte_genes),
+    area2 = length(dge_genes),
+    cross.area = length(common_genes),
+    category = c("gDET", "DEG"),
+    fill = c("blue", "yellow"),
+    alpha = 0.5,
+    cat.cex = 1.2,
+    cex = 1.5,
+    fontface = "bold"
+  )
+
+  # Save Venn diagram
+  venn_file <- paste0(output_prefix, "_venn.png")
+  png(venn_file)
+  grid.draw(venn.plot)
+  dev.off()
+
+  # Save intersecting genes to a file
+  intersect_file <- paste0(output_prefix, "_common_genes.tsv")
+  write_tsv(data.frame(common_genes), intersect_file)
+
+  # Print summary
+  cat("Comparison for:", output_prefix, "\n")
+  cat("Number of genes in DTE analysis:", length(dte_genes), "\n")
+  cat("Number of genes in DGE analysis:", length(dge_genes), "\n")
+  cat("Number of intersecting genes:", length(common_genes), "\n")
+  cat("Venn diagram saved as:", venn_file, "\n")
+  cat("Intersecting genes saved as:", intersect_file, "\n")
+}
+
+# Using it:
+#ks ipscs
+compare_gene_lists(ks_ipscs_res, ipscs_47_deg, "DTE_vs_DGE_ks_ipscs")
+#hga ipscs
+compare_gene_lists(hga_ipscs_res, ipscs_hga_deg, "DTE_vs_DGE_hga_ipscs")
+#ks nscs
+compare_gene_lists(ks_nscs_res, nscs_47_deg, "DTE_vs_DGE_ks_nscs")
+#hga nscs
+compare_gene_lists(hga_nscs_res, nscs_hga_deg, "DTE_vs_DGE_hga_nscs")
+#ks neurons
+compare_gene_lists(ks_neurons_res, neurons_47_deg, "DTE_vs_DGE_ks_neurons")
+#hga neurons
+compare_gene_lists(hga_neurons_res, neurons_hga_deg, "DTE_vs_DGE_hga_neurons")
+
