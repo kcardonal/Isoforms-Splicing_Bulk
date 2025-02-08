@@ -9,6 +9,7 @@ library(ensembldb)
 library(EnsDb.Hsapiens.v86)
 library(clusterProfiler)
 library(org.Hs.eg.db)
+library(tidyr)
 
 
 # Load data
@@ -79,6 +80,43 @@ if (nrow(significant_genes) > 0) {
 }
 # Save the plot
 ggsave("./plots/Expression_vs_Number_of_Xchr_iPSCs.png", width = 6, height = 4, dpi = 300)
+
+#PLOT ACP1 TRANSCRIPTS
+# Step 4: Visualize all transcripts of ACP1
+if (nrow(significant_genes) > 0) {
+  # Filter for the transcripts of ACP1 manually using their transcript IDs
+  gene_transcripts <- significant_genes %>% 
+    filter(transcript %in% c("ENST00000272067", "ENST00000453390", "ENST00000272065"))  # Replace with ACP1 transcripts
+  
+  if (nrow(gene_transcripts) > 0) {
+    # Prepare a data frame for all transcripts
+    plot_df <- do.call(rbind, lapply(gene_transcripts$transcript, function(transcript) {
+      data.frame(
+        transcript_id = transcript,
+        X_chrom_count = metadata_filtered$N_Xchr,  # Replace N_Xchr with your column for X chromosome counts
+        Expression = as.numeric(iso_corrected_filtered[transcript, ])
+      )
+    }))
+    
+    # Create the multi-panel plot
+    p <- ggplot(plot_df, aes(x = X_chrom_count, y = Expression)) +
+      geom_point() +
+      geom_smooth(method = "lm", se = FALSE, color = "blue") +
+      facet_wrap(~ transcript_id, scales = "free_y") +
+      labs(title = "Expression vs Number of X Chromosomes for ACP1 Transcripts in Neurons",
+           x = "Number of X Chromosomes",
+           y = "Normalized Expression") +
+      theme_minimal()
+    
+    # Save the plot
+    ggsave(filename = "ACP1_MultiPanel_Plot.png", plot = p, width = 12, height = 8, dpi = 300)
+  } else {
+    print("No transcripts found for ACP1 in significant_genes.")
+  }
+} else {
+  print("No significant genes found.")
+}
+
 
 #__________________________________________________________________________________________
 ## Annotate the transcripts that correlates with the x dossage, with the gene information
@@ -292,3 +330,43 @@ perform_ora_analysis("./results/Sperman_Corr_XchrDossage_vs_TE_annotated.xlsx", 
 # Run the function for neurons
 perform_ora_analysis("./results/Sperman_Corr_XchrDossage_vs_TE_annotated.xlsx", "Neurons", "Neurons_Corr_ORA")
 
+
+#Plot correlation of specific genes of interest
+# Load the correlation results 
+corr_data <- read.xlsx("./results/Sperman_Corr_XchrDossage_vs_TE_annotated.xlsx", sheet = "Neurons")
+
+# Specify the gene of interest
+gene_of_interest <- "ACP1"  # Replace with your desired gene_name
+
+# Filter the correlation data for the gene of interest
+gene_transcripts <- corr_data %>% filter(gene_name == gene_of_interest)
+
+# Check if there are transcripts for the specified gene
+if (nrow(gene_transcripts) > 0) {
+  
+  # Create a data frame for all transcripts belonging to the gene
+  plot_data <- gene_transcripts %>%
+    rowwise() %>%
+    mutate(
+      X_chrom_count = list(corr_data$X_chrom_count),  # Ensure this column exists
+      Expression = list(corr_data[[transcript_id]])   # Add expression for each transcript
+    ) %>%
+    unnest(cols = c(X_chrom_count, Expression))
+  
+  # Generate a multi-panel plot using facet_wrap
+  p <- ggplot(plot_data, aes(x = X_chrom_count, y = Expression)) +
+    geom_point() +
+    geom_smooth(method = "lm", se = FALSE, color = "blue") +
+    facet_wrap(~ transcript_id, scales = "free_y") +
+    labs(title = paste("Correlation for Transcripts of", gene_of_interest),
+         x = "Number of X Chromosomes",
+         y = "Expression Level") +
+    theme_minimal()
+  
+  # Save the multi-panel plot
+  ggsave(filename = paste0("Correlation_", gene_of_interest, "_MultiPanel.png"), 
+         plot = p, width = 12, height = 8, dpi = 300)
+  
+} else {
+  print("No transcripts found for the specified gene.")
+}
