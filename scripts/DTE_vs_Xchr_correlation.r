@@ -81,7 +81,8 @@ if (nrow(significant_genes) > 0) {
 # Save the plot
 ggsave("./plots/Expression_vs_Number_of_Xchr_iPSCs.png", width = 6, height = 4, dpi = 300)
 
-#PLOT ACP1 TRANSCRIPTS
+#__________________________PLOT ACP1 TRANSCRIPTS_____________________________________
+
 # Step 4: Visualize all transcripts of ACP1
 if (nrow(significant_genes) > 0) {
   # Filter for the transcripts of ACP1 manually using their transcript IDs
@@ -119,7 +120,7 @@ if (nrow(significant_genes) > 0) {
 
 
 #__________________________________________________________________________________________
-## Annotate the transcripts that correlates with the x dossage, with the gene information
+##__________ Annotate the transcripts that correlates with the x dossage, with the gene information___________
 
 # Load the correlation results
 corr_ipscs <- read.xlsx("../results_DTE/Sperman_Corr_XchrDossage_vs_TE.xlsx" , sheet = "iPSCs")
@@ -211,10 +212,10 @@ annotated_missing <- annotated_missing[, colnames(corr_ipscs_annotated)]
 # Save the annotated missing data
 write.xlsx(annotated_missing, file = "../Large_Files_No_repo/MissingAnnot_neurons.xlsx")
 
-#_________________Functional Annnotation of Genes with dossaage effect____________________
+
+#_________________Functional Annnotation of Genes with dossaage effect_________________
 
 # Function to perform ORA analysis on the correlated tanscripts
-# Load required libraries
 
 # Define the function
 perform_ora_analysis <- function(input_file, sheet_name, output_filename) {
@@ -222,8 +223,8 @@ perform_ora_analysis <- function(input_file, sheet_name, output_filename) {
   # Load correlation results
   corr_data <- read.xlsx(input_file, sheet = sheet_name)
 
-  # Separate positive and negative correlation groups
-  positive_corr <- corr_data %>% filter(correlation.rho > 0)
+  # Separate positive and negative correlation groups, modify correlation.rho to the needed threshold: abs(0.5), abs(0.6) and abs(0.7)
+  positive_corr <- corr_data %>% filter(correlation.rho > 0.7)
   negative_corr <- corr_data %>% filter(correlation.rho < 0)
 
   # Extract unique gene IDs
@@ -286,7 +287,7 @@ perform_ora_analysis <- function(input_file, sheet_name, output_filename) {
 
   # Visualization (optional)
   # Define output directory
-  output_dir <- "./plots/ORA_Correlations_Plots"
+  output_dir <- "./plots/ORA_Correlations_Plots_0.7"
 
   # Save dot plots for GO enrichment
   ggsave(filename = file.path(output_dir, "GO_BP_Positive.png"), 
@@ -324,14 +325,14 @@ perform_ora_analysis <- function(input_file, sheet_name, output_filename) {
 }
 
 # Run the function for ipscs
-perform_ora_analysis("./results/Sperman_Corr_XchrDossage_vs_TE_annotated.xlsx", "iPSCs", "iPSCs_Corr_ORA")
+perform_ora_analysis("./results/Sperman_Corr_XchrDossage_vs_TE_annotated.xlsx", "iPSCs", "iPSCs_Corr_ORA_0.7")
 # Run the function for nscs
-perform_ora_analysis("./results/Sperman_Corr_XchrDossage_vs_TE_annotated.xlsx", "NSCs", "NSCs_Corr_ORA")
+perform_ora_analysis("./results/Sperman_Corr_XchrDossage_vs_TE_annotated.xlsx", "NSCs", "NSCs_Corr_ORA_0.7")
 # Run the function for neurons
-perform_ora_analysis("./results/Sperman_Corr_XchrDossage_vs_TE_annotated.xlsx", "Neurons", "Neurons_Corr_ORA")
+perform_ora_analysis("./results/Sperman_Corr_XchrDossage_vs_TE_annotated.xlsx", "Neurons", "Neurons_Corr_ORA_0.7")
 
 
-#Plot correlation of specific genes of interest
+#______________________Plot correlation of specific genes of interest________________________________
 # Load the correlation results 
 corr_data <- read.xlsx("./results/Sperman_Corr_XchrDossage_vs_TE_annotated.xlsx", sheet = "Neurons")
 
